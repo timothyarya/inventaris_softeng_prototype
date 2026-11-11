@@ -21,6 +21,7 @@ export type BranchDetail = Branch & {
     productsInStock: number;
     totalQty: number;
     lowStock: number;
+    outOfStock: number;
   };
 };
 
@@ -55,6 +56,9 @@ export type Product = {
   updatedAt: string;
 };
 
+/** AMAN, MENIPIS (0 < qty < stok min.), HABIS (qty 0). Produk nonaktif selalu AMAN. */
+export type StockStatus = "AMAN" | "MENIPIS" | "HABIS";
+
 export type StockRow = {
   branch: BranchRef & { isActive: boolean };
   product: {
@@ -67,7 +71,7 @@ export type StockRow = {
     category: string | null;
   };
   qty: number;
-  isLow: boolean;
+  status: StockStatus;
 };
 
 export type StockInSummary = {

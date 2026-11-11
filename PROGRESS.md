@@ -86,7 +86,7 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 
 - Stok masuk: tanggal default hari ini (WIB), boleh mundur, tidak boleh masa depan; produk ganda dalam satu dokumen ditolak; qty 1–1.000.000 per item; maksimal 200 baris. Nomor dokumen memakai tanggal pembuatan (hari ini, WIB).
 - `/stok` per cabang yang dipilih, default gudang utama; `GET /stocks` tanpa `branchId` mengembalikan semua cabang aktif.
-- Seed menyisakan produk di bawah stok minimum dan tanpa stok agar penanda "Menipis" bisa dicoba.
+- Seed menyisakan produk di bawah stok minimum dan tanpa stok agar penanda Menipis dan Habis bisa dicoba.
 
 ### Keputusan implementasi Fase 4 (lengkapnya di bagian 14 INSTRUCTION.md)
 
@@ -100,6 +100,11 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 
 - SuperAdmin → **Admin Cabang**, Pegawai → **Pegawai Cabang** (Owner tetap); hak akses sama. Nilai enum di database dan API ikut diganti (`ADMIN_CABANG`, `PEGAWAI_CABANG`) lewat migrasi `rename_roles`; setelah `git pull` jalankan `npm run db:deploy --workspace backend` (atau `npm run db:migrate`).
 - Akun seed berganti nama dan email (lihat bagian 2); akun di database diubah di tempat. Akun Admin Cabang boleh lebih dari satu; seed menambah `admincabang2@softeng.local` untuk pengujian. Detail di bagian 14 INSTRUCTION.md.
+
+### Revisi setelah Fase 4: status stok dan role akun sendiri
+
+- Status stok kini tiga: **Aman**, **Menipis** (kuning, `0 < qty < stok min.`), **Habis** (merah, qty 0 berapa pun stok minimumnya). `GET /stocks` mengembalikan `status` (bukan `isLow`) dan menerima `?status=`; ringkasan cabang memuat `lowStock` dan `outOfStock`. Dashboard (Fase 7) dan laporan (Fase 8) sebaiknya menampilkan Menipis dan Habis terpisah.
+- Role akun sendiri tidak dapat diubah (409 `SELF_ROLE_CHANGE`; di UI tampil sebagai teks). Perlindungan "minimal 1 Owner aktif" sudah ada sebelumnya; aturan ini melengkapinya dan juga berlaku bila ada beberapa Owner. Detail di bagian 14 INSTRUCTION.md.
 
 ### Hal teknis lain
 
@@ -124,7 +129,7 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
    - Tidak ada pembatasan percobaan login.
 6. **Sebagian halaman di sidebar belum ada.** Produk, Kategori, Cabang, User (Fase 2), Stok Cabang, Inventaris, Stok Masuk (Fase 3), Transfer, dan Request Stok (Fase 4) sudah ada. Opname, Riwayat, dan Laporan masih menampilkan "Halaman tidak ditemukan" di dalam layout sampai fasenya dikerjakan.
 7. **Folder kosong dari struktur spec** (`modules/*` selain `auth`, `services/`) belum ada di git. Dibuat saat dipakai.
-8. **Ringkasan stok cabang kosong di cabang baru:** cabang tanpa stok menampilkan semua produk aktif ber-`min_stock > 0` sebagai "stok menipis" (qty 0 < min), sesuai definisi yang disepakati. Wajar sampai ada transfer yang diterima.
+8. **Cabang baru tanpa stok:** semua produk aktifnya berstatus Habis (qty 0) sampai ada transfer yang diterima. Wajar.
 9. **Skenario uji 9 (nonaktif cabang dengan transfer DISETUJUI/DIKIRIM)** kini diuji di Fase 4 lewat transfer sungguhan di level API (ditolak 409; DIAJUKAN otomatis dibatalkan setelah transfer selesai). Belum ada pengujian lewat klik di UI untuk skenario ini.
 10. **Data uji dibersihkan manual.** Skrip uji membuat data (transfer, stok masuk, cabang `ZT…`) lalu dihapus lewat skrip pembersih khusus; data yang Anda input sendiri tidak disentuh. Di Fase 9 tes memakai database terpisah sehingga tidak perlu lagi.
 11. **Cabang yang dinonaktifkan tidak bisa menerima kiriman langsung maupun request**, tetapi transfer yang sudah DISETUJUI/DIKIRIM ke cabang itu memblokir penonaktifan (409) sehingga tidak ada transfer yang menggantung.

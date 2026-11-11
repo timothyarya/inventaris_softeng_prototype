@@ -3,6 +3,7 @@ import type { Prisma } from "../../generated/prisma/client";
 import { conflict, notFound } from "../../utils/errors";
 import { pageMeta, skipTake } from "../../utils/pagination";
 import type { CreateBranchInput, ListBranchesQuery, UpdateBranchInput } from "./schema";
+import { stockStatus } from "../stocks/status";
 
 type BranchRow = Prisma.BranchGetPayload<{ include: { _count: { select: { users: true } } } }>;
 
@@ -54,14 +55,15 @@ async function stockSummary(branchId: number) {
     prisma.branchStock.findMany({ where: { branchId }, select: { productId: true, qty: true } }),
   ]);
   const qtyByProduct = new Map(stocks.map((s) => [s.productId, s.qty]));
-  const lowStock = products.filter(
-    (p) => p.minStock > 0 && (qtyByProduct.get(p.id) ?? 0) < p.minStock,
-  ).length;
+  const statuses = products.map((p) => stockStatus(qtyByProduct.get(p.id) ?? 0, p.minStock, true));
+  const lowStock = statuses.filter((s) => s === "MENIPIS").length;
+  const outOfStock = statuses.filter((s) => s === "HABIS").length;
   return {
     activeProducts: products.length,
     productsInStock: stocks.filter((s) => s.qty > 0).length,
     totalQty: stocks.reduce((sum, s) => sum + s.qty, 0),
     lowStock,
+    outOfStock,
   };
 }
 

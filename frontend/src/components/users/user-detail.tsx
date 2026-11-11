@@ -150,7 +150,13 @@ function UserDetailView({ user }: { user: ManagedUser }) {
           <CardTitle>Data user</CardTitle>
         </CardHeader>
         <CardContent>
-          <UserForm mode="edit" user={user} pending={update.isPending} onSubmit={onSubmit} />
+          <UserForm
+            mode="edit"
+            user={user}
+            lockRole={isSelf}
+            pending={update.isPending}
+            onSubmit={onSubmit}
+          />
         </CardContent>
       </Card>
 

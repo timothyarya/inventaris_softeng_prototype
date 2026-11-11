@@ -21,7 +21,9 @@ export const create: RequestHandler = async (req, res) => {
 
 export const update: RequestHandler = async (req, res) => {
   const { id } = validatedParams<IdParams>(req);
-  res.json({ data: await service.updateUser(id, req.body as UpdateUserInput) });
+  res.json({
+    data: await service.updateUser(id, req.body as UpdateUserInput, currentUser(req).id),
+  });
 };
 
 export const deactivate: RequestHandler = async (req, res) => {

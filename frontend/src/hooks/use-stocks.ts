@@ -12,7 +12,8 @@ export type StockListParams = {
   branchId?: number;
   productId?: number;
   q?: string;
-  lowOnly?: boolean;
+  /** Filter satu status. */
+  status?: "AMAN" | "MENIPIS" | "HABIS";
 };
 
 export function useStocks(params: StockListParams, options: { enabled?: boolean } = {}) {

@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useStocks } from "@/hooks/use-stocks";
 import { getErrorMessage } from "@/lib/apiClient";
 import { formatBranch, formatNumber } from "@/lib/format";
-import { StockStatusBadge } from "@/components/stocks/stock-list";
+import { StockStatusBadge, stockQtyClass } from "@/components/stocks/stock-list";
 
 /** Stok satu produk di semua cabang aktif (bagian 9: /produk/[id]). */
 export function ProductStockCard({ productId }: { productId: number }) {
@@ -41,7 +41,7 @@ export function ProductStockCard({ productId }: { productId: number }) {
                     {formatBranch(r.branch)}
                   </Link>
                   <span className="flex items-center gap-3">
-                    <span className={r.isLow ? "text-destructive font-semibold" : "font-medium"}>
+                    <span className={stockQtyClass(r.status)}>
                       {formatNumber(r.qty)} {r.product.unit}
                     </span>
                     <StockStatusBadge row={r} />

@@ -13,6 +13,9 @@ export const listStocksQuerySchema = z.object({
   branchId: id("Cabang").optional(),
   productId: id("Produk").optional(),
   q: z.string().trim().optional(),
+  // Filter satu status. Produk nonaktif tidak termasuk status mana pun (tidak dipantau).
+  status: z.enum(["AMAN", "MENIPIS", "HABIS"], { error: "Status stok tidak valid" }).optional(),
+  // Singkatan "perlu perhatian": MENIPIS atau HABIS.
   lowOnly: z
     .enum(["true", "false"], { error: "lowOnly harus true atau false" })
     .optional()

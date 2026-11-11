@@ -5,6 +5,7 @@ import { pageMeta } from "../../utils/pagination";
 import { resolveBranchId } from "../../utils/scope";
 import type { AuthUser } from "../auth/service";
 import type { ListStocksQuery } from "./schema";
+import { stockStatus } from "./status";
 
 type StockRow = {
   branch_id: number;
@@ -25,7 +26,7 @@ type StockRow = {
 /**
  * Stok per cabang × produk (bagian 7, 9). Produk tanpa baris `branch_stocks` dianggap qty 0
  * (bagian 14). Produk nonaktif hanya tampil bila masih ada stoknya (untuk Pegawai Cabang: tidak
- * pernah tampil). Stok menipis: `qty < min_stock`, hanya produk aktif dengan `min_stock > 0`.
+ * pernah tampil). Status AMAN/MENIPIS/HABIS: lihat `status.ts`. `lowOnly` = MENIPIS atau HABIS.
  */
 export async function listStocks(query: ListStocksQuery, user: AuthUser) {
   // Pegawai Cabang: cabang selalu dari server, parameter client diabaikan (bagian 3.3).
@@ -59,11 +60,14 @@ export async function listStocks(query: ListStocksQuery, user: AuthUser) {
     const like = `%${query.q}%`;
     conditions.push(Prisma.sql`(p.sku ILIKE ${like} OR p.name ILIKE ${like})`);
   }
-  if (query.lowOnly) {
-    conditions.push(
-      Prisma.sql`(p.is_active AND p.min_stock > 0 AND COALESCE(bs.qty, 0) < p.min_stock)`,
-    );
-  }
+  // Kondisi SQL ini harus sejalan dengan `stockStatus` di status.ts.
+  const habis = Prisma.sql`(p.is_active AND COALESCE(bs.qty, 0) = 0)`;
+  const menipis = Prisma.sql`(p.is_active AND COALESCE(bs.qty, 0) > 0 AND p.min_stock > 0 AND COALESCE(bs.qty, 0) < p.min_stock)`;
+  const aman = Prisma.sql`(p.is_active AND COALESCE(bs.qty, 0) > 0 AND (p.min_stock = 0 OR COALESCE(bs.qty, 0) >= p.min_stock))`;
+  if (query.lowOnly) conditions.push(Prisma.sql`(${menipis} OR ${habis})`);
+  if (query.status === "HABIS") conditions.push(habis);
+  if (query.status === "MENIPIS") conditions.push(menipis);
+  if (query.status === "AMAN") conditions.push(aman);
   const where = Prisma.join(conditions, " AND ");
 
   const from = Prisma.sql`
@@ -105,7 +109,7 @@ export async function listStocks(query: ListStocksQuery, user: AuthUser) {
       category: r.category_name,
     },
     qty: r.qty,
-    isLow: r.product_is_active && r.min_stock > 0 && r.qty < r.min_stock,
+    status: stockStatus(r.qty, r.min_stock, r.product_is_active),
   }));
 
   return { data, meta: pageMeta(query, count[0]?.total ?? 0) };

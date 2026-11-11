@@ -108,9 +108,10 @@ export async function createUser(input: CreateUserInput) {
  * Edit user, assign/pindah cabang, ubah role, dan reset password (bagian 4.2 + keputusan 14).
  * - Role Owner/Admin Cabang: branch_id dikosongkan otomatis.
  * - Role Pegawai Cabang: cabang boleh kosong; bila diisi harus cabang aktif dan bukan gudang utama.
+ * - Role akun sendiri tidak boleh diubah (mencegah kehilangan akses); nama, email, password boleh.
  * - Owner aktif terakhir tidak boleh diturunkan role-nya.
  */
-export async function updateUser(id: number, input: UpdateUserInput) {
+export async function updateUser(id: number, input: UpdateUserInput, actorId: number) {
   const passwordHash = input.password ? await hashPassword(input.password) : undefined;
 
   return prisma.$transaction(async (tx) => {
@@ -118,6 +119,13 @@ export async function updateUser(id: number, input: UpdateUserInput) {
 
     const user = await tx.user.findUnique({ where: { id } });
     if (!user) throw notFound("User tidak ditemukan.");
+
+    if (id === actorId && input.role !== undefined && input.role !== user.role) {
+      throw conflict(
+        "Anda tidak dapat mengubah role akun Anda sendiri. Minta Owner lain bila perlu.",
+        "SELF_ROLE_CHANGE",
+      );
+    }
 
     const finalRole = input.role ?? user.role;
     let finalBranchId: number | null;

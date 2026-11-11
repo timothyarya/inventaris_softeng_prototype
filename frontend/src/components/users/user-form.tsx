@@ -19,11 +19,14 @@ const ROLES: Role[] = ["OWNER", "ADMIN_CABANG", "PEGAWAI_CABANG"];
 export function UserForm({
   mode,
   user,
+  lockRole = false,
   pending,
   onSubmit,
 }: {
   mode: "create" | "edit";
   user?: ManagedUser;
+  /** Akun sendiri: role tidak boleh diubah (hanya ditampilkan). */
+  lockRole?: boolean;
   pending: boolean;
   onSubmit: (values: UserFormValues) => void;
 }) {
@@ -90,18 +93,27 @@ export function UserForm({
         htmlFor="role"
         error={errors.role?.message}
         hint={
-          role === "PEGAWAI_CABANG"
-            ? undefined
-            : "Owner dan Admin Cabang tidak terikat cabang; penugasan cabang akan dikosongkan."
+          lockRole
+            ? "Role akun Anda sendiri tidak dapat diubah agar Anda tidak kehilangan akses."
+            : role === "PEGAWAI_CABANG"
+              ? undefined
+              : "Owner dan Admin Cabang tidak terikat cabang; penugasan cabang akan dikosongkan."
         }
       >
-        <NativeSelect id="role" {...register("role")}>
-          {ROLES.map((r) => (
-            <NativeSelectOption key={r} value={r}>
-              {ROLE_LABEL[r]}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+        {lockRole ? (
+          // Bukan field form: nilai role tetap dari defaultValues dan dikirim apa adanya.
+          <p id="role" className="text-sm font-medium">
+            {ROLE_LABEL[role]}
+          </p>
+        ) : (
+          <NativeSelect id="role" {...register("role")}>
+            {ROLES.map((r) => (
+              <NativeSelectOption key={r} value={r}>
+                {ROLE_LABEL[r]}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        )}
       </FormField>
       {role === "PEGAWAI_CABANG" && (
         <FormField

@@ -699,8 +699,8 @@ Header menampilkan nama user, role, nama cabang (Pegawai Cabang), dan tombol log
 | `/produk` | Owner, Admin Cabang | tabel produk + cari/filter, aktif/nonaktif |
 | `/produk/baru`, `/produk/[id]` | Owner, Admin Cabang | form produk + stok produk ini di semua cabang |
 | `/kategori` | Owner, Admin Cabang | CRUD kategori (dialog) |
-| `/inventaris` | Pegawai Cabang | produk + stok cabangnya, penanda stok menipis |
-| `/stok` | Owner, Admin Cabang | stok per cabang (pilih cabang), penanda menipis |
+| `/inventaris` | Pegawai Cabang | produk + stok cabangnya, penanda status stok (Aman, Menipis, Habis) |
+| `/stok` | Owner, Admin Cabang | stok per cabang (pilih cabang), penanda status stok |
 | `/cabang`, `/cabang/baru`, `/cabang/[id]` | Owner | daftar, form, detail (pegawai & ringkasan stok), nonaktif/aktifkan |
 | `/users`, `/users/baru`, `/users/[id]` | Owner | daftar, form, assign cabang, nonaktif/aktifkan |
 | `/stok-masuk`, `/stok-masuk/baru`, `/stok-masuk/[id]` | Owner, Admin Cabang | daftar, form multi-item, detail |
@@ -863,7 +863,12 @@ Keputusan di bagian ini melengkapi bagian 1–13. Jika ada pertentangan dengan b
 - Owner dan Admin Cabang mendapat menu **Stok Cabang** (route `/stok`), diletakkan tepat setelah menu Produk.
 
 ### Stok menipis
-- Definisi: `qty < min_stock`, hanya untuk produk aktif dengan `min_stock > 0`. Produk tanpa baris `branch_stocks` dianggap qty 0. Gudang utama ikut dihitung di dashboard Owner/Admin Cabang.
+- **Tiga status stok** per produk di satu cabang (revisi setelah Fase 4): **Aman**, **Menipis** (kuning), dan **Habis** (merah). Hanya produk aktif yang dipantau; produk nonaktif yang masih punya stok selalu ditampilkan sebagai Aman (dengan label "Produk nonaktif").
+  - **Habis:** qty = 0, berapa pun stok minimumnya (produk dengan `min_stock = 0` yang stoknya 0 juga Habis).
+  - **Menipis:** qty > 0 tetapi di bawah stok minimum (`0 < qty < min_stock`, hanya bila `min_stock > 0`).
+  - **Aman:** selain itu.
+  - Produk tanpa baris `branch_stocks` dianggap qty 0 (jadi Habis). Gudang utama ikut dihitung di dashboard Owner/Admin Cabang.
+  - Kartu/tabel "stok menipis" di dashboard (Fase 7) dan laporan (Fase 8) menampilkan **Menipis dan Habis secara terpisah**; keduanya adalah item yang perlu perhatian.
 
 ### Dashboard
 - "Request saya yang masih berjalan" berarti status `DIAJUKAN`, `DISETUJUI`, atau `DIKIRIM`.
@@ -898,8 +903,8 @@ Keputusan di bagian ini melengkapi bagian 1–13. Jika ada pertentangan dengan b
 - **Stok masuk:** tanggal dokumen boleh diisi mundur (mis. tanggal faktur lama), default hari ini (WIB), dan **tidak boleh di masa depan** (400). Produk yang sama di dua baris item **ditolak** (400, "Produk dipilih lebih dari sekali"); di form, produk yang sudah dipilih tidak ditawarkan lagi di baris lain. Qty per item 1–1.000.000 (mencegah salah ketik) dan maksimal 200 baris item per dokumen. Produk nonaktif ditolak 409 `PRODUCT_INACTIVE`; gudang utama nonaktif ditolak 409 `MAIN_BRANCH_INACTIVE`. Tidak ada endpoint ubah/hapus (final). Form meminta konfirmasi sebelum menyimpan.
 - **`GET /stock-ins`** mendukung `?q=` (no. dokumen, supplier, no. faktur), `?from=` dan `?to=` (tanggal dokumen, YYYY-MM-DD), serta paginasi; diurutkan tanggal lalu id terbaru. Daftar memuat `itemCount` dan `totalQty`; `GET /stock-ins/:id` memuat item beserta produknya.
 - **`GET /stocks`** (semua role) mengembalikan baris cabang × produk: `{ branch, product, qty, isLow }`. Parameter: `branchId` (diabaikan untuk Pegawai Cabang, selalu cabangnya), `productId`, `q` (SKU/nama), `lowOnly=true`, paginasi. Tanpa `branchId`, Owner/Admin Cabang mendapat semua **cabang aktif** (cabang nonaktif hanya muncul bila dipilih langsung lewat `branchId`). Produk tanpa baris `branch_stocks` dihitung qty 0. Produk nonaktif hanya tampil bila masih ada stoknya, dan tidak pernah tampil untuk Pegawai Cabang. `isLow` mengikuti definisi stok menipis di atas. `branchId` atau `productId` yang tidak ada dijawab 404.
-- **`/stok`** (Owner/Admin Cabang): dropdown semua cabang (cabang nonaktif diberi tanda), default gudang utama, pencarian, dan filter "stok menipis saja". **`/inventaris`** (Pegawai Cabang): tampilan yang sama untuk cabangnya sendiri, tanpa dropdown. `/produk/[id]` menampilkan stok produk di semua cabang aktif.
-- **Seed** menambah satu stok masuk contoh (`PT Supplier Contoh`, 9 produk) lewat `createStockIn`, hanya bila belum ada stok masuk sama sekali. Sengaja ada produk di bawah stok minimum (ATK-004, ELK-002) dan tanpa stok (MKN-003) agar penanda stok menipis bisa dicoba.
+- **`/stok`** (Owner/Admin Cabang): dropdown semua cabang (cabang nonaktif diberi tanda), default gudang utama, pencarian, dan filter status (semua, menipis saja, habis saja). **`/inventaris`** (Pegawai Cabang): tampilan yang sama untuk cabangnya sendiri, tanpa dropdown. `/produk/[id]` menampilkan stok produk di semua cabang aktif.
+- **Seed** menambah satu stok masuk contoh (`PT Supplier Contoh`, 9 produk) lewat `createStockIn`, hanya bila belum ada stok masuk sama sekali. Sengaja ada produk di bawah stok minimum (ATK-004, ELK-002) dan tanpa stok (MKN-003) agar penanda Menipis dan Habis bisa dicoba.
 
 ### Implementasi Fase 4 (transfer stok)
 - **Endpoint** (modul `transfers`, semua di bawah `/api/transfers`): `GET /` dan `GET /:id` (semua role; Pegawai Cabang hanya transfer menuju cabangnya, selain itu 404), `POST /requests` (Pegawai Cabang), `POST /direct` (Owner/Admin Cabang), `POST /:id/cancel` (Pegawai Cabang), `POST /:id/approve`, `/:id/reject`, `/:id/send` (Owner/Admin Cabang), `POST /:id/receive` (Pegawai Cabang). Respons objek tunggal `{ data: transfer }`. Aksi yang menerima daftar item (`approve`, `send`, `receive`) boleh dipanggil tanpa body: nilai bawaannya dipakai.
@@ -918,3 +923,9 @@ Keputusan di bagian ini melengkapi bagian 1–13. Jika ada pertentangan dengan b
 - **Nilai internal ikut diganti:** enum `Role` menjadi `OWNER`, `ADMIN_CABANG`, `PEGAWAI_CABANG` (migrasi `rename_roles` memakai `ALTER TYPE … RENAME VALUE`, data user tetap). API menerima dan mengembalikan nilai baru; nilai lama (`SUPERADMIN`, `PEGAWAI`) ditolak 400.
 - **Akun seed:** `admincabang1@softeng.local` ("Admin Cabang 1"), `admincabang2@softeng.local` ("Admin Cabang 2"), `pegawaicabang1@softeng.local` ("Pegawai Cabang CB01"), `pegawaicabang2@softeng.local` ("Pegawai Cabang CB02"); Owner tetap `owner@softeng.local`. Akun yang sudah ada di database diubah di tempat (ID dan password tetap); email lama tidak berlaku lagi.
 - **Akun Admin Cabang boleh lebih dari satu**, sama seperti Pegawai Cabang. Satu-satunya pembatas jumlah adalah Owner (minimal 1 Owner aktif). Admin Cabang wajib tanpa cabang.
+
+### Revisi: status stok tiga tingkat dan role akun sendiri
+- **`GET /stocks`** kini mengembalikan `status` (`AMAN` | `MENIPIS` | `HABIS`) menggantikan `isLow`. Filter baru `?status=AMAN|MENIPIS|HABIS` (selain itu 400); `?lowOnly=true` tetap ada dan berarti MENIPIS atau HABIS. Aturan status ada di satu tempat (`backend/src/modules/stocks/status.ts`), dan kondisi SQL filter mengikutinya.
+- **Ringkasan stok cabang** (`GET /branches/:id`) memuat `lowStock` (jumlah Menipis) dan `outOfStock` (jumlah Habis) untuk produk aktif.
+- **UI:** badge Habis merah (warna yang sebelumnya dipakai Menipis), Menipis kuning, Aman teks biasa; angka stok ikut berwarna. Filter di `/stok` dan `/inventaris`: Semua stok / Menipis saja / Habis saja.
+- **Role akun sendiri tidak boleh diubah.** `PATCH /users/:id` pada akun yang sedang login dengan role berbeda ditolak **409 `SELF_ROLE_CHANGE`** (mengirim role yang sama tetap diterima). Nama, email, dan password akun sendiri tetap boleh diubah. Di UI, halaman user akun sendiri menampilkan role sebagai teks beserta penjelasan, bukan dropdown. Owner lain tetap dapat mengubah role Owner lainnya. Aturan "minimal 1 Owner aktif" (`LAST_OWNER`) tetap berlaku untuk akun orang lain, dan menonaktifkan akun sendiri tetap ditolak (`SELF_DEACTIVATE`).

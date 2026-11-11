@@ -15,11 +15,21 @@ import { formatBranch, formatNumber } from "@/lib/format";
 import type { StockRow } from "@/lib/types";
 
 export function StockStatusBadge({ row }: { row: StockRow }) {
-  if (row.isLow) {
+  if (row.status === "HABIS") {
     return (
       <Badge
         variant="secondary"
         className="bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
+      >
+        Habis
+      </Badge>
+    );
+  }
+  if (row.status === "MENIPIS") {
+    return (
+      <Badge
+        variant="secondary"
+        className="bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300"
       >
         Menipis
       </Badge>
@@ -38,6 +48,13 @@ export function StockStatusBadge({ row }: { row: StockRow }) {
   return <span className="text-muted-foreground">Aman</span>;
 }
 
+/** Warna angka stok mengikuti status: habis merah, menipis kuning, aman biasa. */
+export function stockQtyClass(status: StockRow["status"]) {
+  if (status === "HABIS") return "text-destructive font-semibold";
+  if (status === "MENIPIS") return "font-semibold text-yellow-700 dark:text-yellow-400";
+  return "font-medium";
+}
+
 export const stockColumns: Column<StockRow>[] = [
   { header: "SKU", cell: (r) => <span className="font-mono text-xs">{r.product.sku}</span> },
   { header: "Produk", cell: (r) => <span className="font-medium">{r.product.name}</span> },
@@ -46,7 +63,7 @@ export const stockColumns: Column<StockRow>[] = [
     header: "Stok",
     className: "text-right",
     cell: (r) => (
-      <span className={r.isLow ? "text-destructive font-semibold" : "font-medium"}>
+      <span className={stockQtyClass(r.status)}>
         {formatNumber(r.qty)} {r.product.unit}
       </span>
     ),
@@ -64,7 +81,7 @@ export function StockList({ mode }: { mode: "admin" | "pegawai" }) {
   const branches = useBranches({ page: 1, pageSize: 100 }); // semua cabang (aktif dan nonaktif)
   const [selected, setSelected] = useState<string>("");
   const [search, setSearch] = useState("");
-  const [low, setLow] = useState<"" | "low">("");
+  const [statusFilter, setStatusFilter] = useState<"" | "MENIPIS" | "HABIS">("");
   const [page, setPage] = useState(1);
   const q = useDebouncedValue(search.trim());
 
@@ -74,7 +91,7 @@ export function StockList({ mode }: { mode: "admin" | "pegawai" }) {
   const branchId = mode === "admin" ? (selected ? Number(selected) : mainBranch?.id) : undefined;
 
   const query = useStocks(
-    { page, pageSize: 20, branchId, q: q || undefined, lowOnly: low === "low" ? true : undefined },
+    { page, pageSize: 20, branchId, q: q || undefined, status: statusFilter || undefined },
     { enabled: mode === "pegawai" || branchId !== undefined },
   );
 
@@ -82,7 +99,7 @@ export function StockList({ mode }: { mode: "admin" | "pegawai" }) {
   const title = mode === "admin" ? "Stok Cabang" : "Inventaris";
   const description =
     mode === "admin"
-      ? "Stok per produk di setiap cabang. Stok menipis berarti jumlahnya di bawah stok minimum."
+      ? "Stok per produk di setiap cabang. Menipis: jumlahnya di bawah stok minimum. Habis: stok 0."
       : own
         ? `Stok produk di ${formatBranch(own)}.`
         : undefined;
@@ -124,15 +141,16 @@ export function StockList({ mode }: { mode: "admin" | "pegawai" }) {
           />
         </div>
         <NativeSelect
-          value={low}
+          value={statusFilter}
           onChange={(e) => {
-            setLow(e.target.value as "" | "low");
+            setStatusFilter(e.target.value as "" | "MENIPIS" | "HABIS");
             setPage(1);
           }}
           aria-label="Filter stok"
         >
           <NativeSelectOption value="">Semua stok</NativeSelectOption>
-          <NativeSelectOption value="low">Stok menipis saja</NativeSelectOption>
+          <NativeSelectOption value="MENIPIS">Menipis saja</NativeSelectOption>
+          <NativeSelectOption value="HABIS">Habis saja</NativeSelectOption>
         </NativeSelect>
       </div>
 
@@ -146,9 +164,19 @@ export function StockList({ mode }: { mode: "admin" | "pegawai" }) {
         onRetry={() => void query.refetch()}
         onPageChange={setPage}
         rowKey={(r) => `${r.branch.id}-${r.product.id}`}
-        emptyTitle={low === "low" ? "Tidak ada stok menipis" : "Tidak ada produk"}
+        emptyTitle={
+          statusFilter === "MENIPIS"
+            ? "Tidak ada stok menipis"
+            : statusFilter === "HABIS"
+              ? "Tidak ada stok habis"
+              : "Tidak ada produk"
+        }
         emptyDescription={
-          low === "low" ? "Semua produk di atas stok minimum." : "Ubah kata kunci pencarian."
+          statusFilter === "MENIPIS"
+            ? "Tidak ada produk yang di bawah stok minimum."
+            : statusFilter === "HABIS"
+              ? "Semua produk masih memiliki stok."
+              : "Ubah kata kunci pencarian."
         }
       />
     </div>

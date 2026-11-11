@@ -220,7 +220,16 @@ function BranchDetailView({ branch }: { branch: BranchDetailData }) {
                 <Stat label="Produk aktif" value={summary.activeProducts} />
                 <Stat label="Produk ada stok" value={summary.productsInStock} />
                 <Stat label="Total qty" value={summary.totalQty} />
-                <Stat label="Stok menipis" value={summary.lowStock} warn={summary.lowStock > 0} />
+                <Stat
+                  label="Stok menipis"
+                  value={summary.lowStock}
+                  tone={summary.lowStock > 0 ? "yellow" : undefined}
+                />
+                <Stat
+                  label="Stok habis"
+                  value={summary.outOfStock}
+                  tone={summary.outOfStock > 0 ? "red" : undefined}
+                />
               </dl>
             </CardContent>
           </Card>
@@ -298,13 +307,17 @@ function BranchDetailView({ branch }: { branch: BranchDetailData }) {
   );
 }
 
-function Stat({ label, value, warn }: { label: string; value: number; warn?: boolean }) {
+function Stat({ label, value, tone }: { label: string; value: number; tone?: "yellow" | "red" }) {
+  const color =
+    tone === "red"
+      ? "text-destructive"
+      : tone === "yellow"
+        ? "text-yellow-700 dark:text-yellow-400"
+        : "";
   return (
     <div>
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className={`text-xl font-semibold ${warn ? "text-destructive" : ""}`}>
-        {formatNumber(value)}
-      </dd>
+      <dd className={`text-xl font-semibold ${color}`}>{formatNumber(value)}</dd>
     </div>
   );
 }
