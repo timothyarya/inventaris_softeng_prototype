@@ -4,6 +4,10 @@ import { prisma } from "./config/prisma";
 import { authenticate, requireAssignedBranch } from "./middlewares/auth";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler";
 import { authRouter } from "./modules/auth/routes";
+import { branchesRouter } from "./modules/branches/routes";
+import { categoriesRouter } from "./modules/categories/routes";
+import { productsRouter } from "./modules/products/routes";
+import { usersRouter } from "./modules/users/routes";
 
 export const app = express();
 
@@ -22,6 +26,11 @@ app.use("/api/auth", authRouter);
 // dari DB) dan, untuk Pegawai, sudah punya cabang. Rute per modul dipasang di sini
 // dengan requireRole(...) masing-masing (fase berikutnya).
 app.use("/api", authenticate, requireAssignedBranch);
+
+app.use("/api/branches", branchesRouter);
+app.use("/api/users", usersRouter);
+app.use("/api/categories", categoriesRouter);
+app.use("/api/products", productsRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -37,6 +37,10 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     res.status(409).json(body("CONFLICT", "Data bertentangan dengan data yang sudah ada."));
     return;
   }
+  if (dbCode === "P2003" || dbCode === "23503") {
+    res.status(409).json(body("CONFLICT", "Data masih dipakai oleh data lain."));
+    return;
+  }
   if (dbCode === "23514") {
     res.status(422).json(body("UNPROCESSABLE", "Data melanggar aturan batasan database."));
     return;

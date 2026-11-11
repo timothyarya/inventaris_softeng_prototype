@@ -29,8 +29,8 @@ export const unauthorized = (message = "Sesi tidak valid. Silakan login kembali.
   new AppError(401, "UNAUTHORIZED", message);
 export const forbidden = (message = "Anda tidak memiliki akses.") =>
   new AppError(403, "FORBIDDEN", message);
-export const notFound = (message = "Data tidak ditemukan.") =>
-  new AppError(404, "NOT_FOUND", message);
+export const notFound = (message = "Data tidak ditemukan.", code: ErrorCode = "NOT_FOUND") =>
+  new AppError(404, code, message);
 export const conflict = (message: string, code: ErrorCode = "CONFLICT") =>
   new AppError(409, code, message);
 export const unprocessable = (message: string, code: ErrorCode = "UNPROCESSABLE") =>

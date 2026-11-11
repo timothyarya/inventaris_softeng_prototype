@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMe } from "@/hooks/use-auth";
 import { ROLE_LABEL } from "@/lib/auth";
+import { formatBranch } from "@/lib/format";
 
 // Placeholder Fase 1. Isi dashboard (bagian 4.9) dikerjakan di Fase 7.
 export function DashboardPlaceholder() {
@@ -17,7 +18,7 @@ export function DashboardPlaceholder() {
           <CardTitle>Selamat datang, {user.name}</CardTitle>
           <CardDescription>
             {ROLE_LABEL[user.role]}
-            {user.branch ? ` · ${user.branch.name} (${user.branch.code})` : " · Semua cabang"}
+            {user.branch ? ` · ${formatBranch(user.branch)}` : " · Semua cabang"}
           </CardDescription>
         </CardHeader>
         <CardContent className="text-muted-foreground text-sm">

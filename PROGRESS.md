@@ -6,17 +6,18 @@ _Terakhir diperbarui: 2026-11-11._
 
 ## 1. Status fase
 
-| Fase | Isi                                          | Status      | Commit    |
-| ---- | -------------------------------------------- | ----------- | --------- |
-| 0    | Setup monorepo, Prisma 7, migrasi, seed      | **Selesai** | `039f2ea` |
-| 1    | Auth, RBAC, layout per role                  | **Selesai** | `dd11755` |
-| 2    | Data master (cabang, user, kategori, produk) | Belum       | —         |
-| 3–9  | Stock service & stok masuk → pengujian       | Belum       | —         |
+| Fase | Isi                                          | Status      | Commit             |
+| ---- | -------------------------------------------- | ----------- | ------------------ |
+| 0    | Setup monorepo, Prisma 7, migrasi, seed      | **Selesai** | `039f2ea`          |
+| 1    | Auth, RBAC, layout per role                  | **Selesai** | `dd11755`          |
+| 2    | Data master (cabang, user, kategori, produk) | **Selesai** | commit "Fase 2: …" |
+| 3–9  | Stock service & stok masuk → pengujian       | Belum       | —                  |
 
 ### Yang sudah ada
 
 - **Fase 0:** npm workspaces (`backend`, `frontend`), Express 5 (ESM) + Prisma 7 (`@prisma/adapter-pg`), PostgreSQL 18, dua migrasi (`init` dan `db_constraints` sesuai bagian 6.1), seed (3 cabang, 4 user, 3 kategori, 10 produk), `/api/health` (dengan `SELECT 1`), Next.js 16 + Tailwind 4 + shadcn/ui, proxy `/api/*` ke Express, ESLint dan Prettier.
 - **Fase 1:** `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`; middleware `authenticate` (memuat ulang user dari DB di setiap request), `requireRole`, `requireAssignedBranch`, `validate`, helper scoping `resolveBranchId`; frontend: halaman login, layout sidebar + header per role (drawer di mobile), halaman 403, `/menunggu-penugasan`, penjaga akses `AppShell`, dashboard placeholder.
+- **Fase 2:** modul backend `branches`, `users`, `categories`, `products` (CRUD, aktif/nonaktif, paginasi, pencarian, filter; nonaktif cabang transaksional dengan efek ke pegawai, transfer DIAJUKAN, dan opname MENUNGGU); utilitas `pagination`, `http`, `password`; frontend `/cabang`, `/cabang/baru`, `/cabang/[id]`, `/users`, `/users/baru`, `/users/[id]`, `/kategori` (dialog), `/produk`, `/produk/baru`, `/produk/[id]` dengan komponen bersama `DataTable`, `ConfirmDialog`, `FormField`, `PageHeader`; hook TanStack Query per modul. Kartu "Stok per cabang" di `/produk/[id]` baru placeholder (datanya dari Fase 3).
 
 ## 2. Cara menjalankan
 
@@ -66,6 +67,15 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 - Rute data tak dikenal: 401 tanpa login, 404 dengan login.
 - Frontend: route yang belum dibuat ditangkap `(app)/[...slug]` agar penjaga role tetap berlaku (role tidak berhak melihat 403).
 
+### Keputusan implementasi Fase 2 (lengkapnya di bagian 14 INSTRUCTION.md)
+
+- Password minimal 8 dan maksimal 72 karakter.
+- `GET /branches` mengembalikan semua cabang; filter `?active=`.
+- Kode cabang: huruf besar dan angka 2–20 karakter, tidak bisa diubah. Di UI kode selalu disertai nama (`CB01 — Cabang 01`).
+- Tiga endpoint detail di luar tabel API spec: `GET /branches/:id`, `GET /users/:id`, `GET /products/:id`.
+- Hapus produk juga ditolak jika sudah tercantum di dokumen transfer/opname.
+- Aksi di halaman detail memakai `mutateAsync`: setelah simpan, data dimuat ulang dan tampilan di-remount lewat `key`, sehingga callback `mutate()` tidak dijamin terpanggil (sempat membuat toast hilang dan navigasi setelah hapus produk tidak terjadi).
+
 ### Hal teknis lain
 
 - **Seed Fase 0 tanpa stok masuk contoh.** Stok masuk contoh baru ditambahkan di Fase 3 lewat `stockService` (disepakati).
@@ -81,38 +91,27 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 ## 4. Masalah yang belum selesai
 
 1. **`npm run db:reset` belum teruji.** Prisma memblokir `migrate reset` dari agen AI tanpa persetujuan eksplisit pemilik proyek. Script sudah diperbaiki (`prisma migrate reset --force && prisma generate && prisma db seed`), tetapi perlu dijalankan sendiri sekali. Perintah itu menghapus semua data database development.
-2. **Skrip uji tidak masuk repo.** Pengujian Fase 1 (46 cek HTTP, 14 cek `requireRole`/scoping, 62 cek browser) dijalankan lewat skrip sementara di folder scratchpad dan tidak di-commit. Tes otomatis di repo baru dibuat di Fase 9 (Vitest + Supertest).
+2. **Skrip uji tidak masuk repo.** Pengujian Fase 1 (46 cek HTTP, 14 cek `requireRole`/scoping, 62 cek browser) dan Fase 2 (153 cek API, 56 cek browser) dijalankan lewat skrip sementara di folder scratchpad dan tidak di-commit. Tes otomatis di repo baru dibuat di Fase 9 (Vitest + Supertest).
 3. **Database tes belum dipakai.** `softeng_inventaris_test` sudah dibuat tetapi belum dimigrasi. Ingat: URL migrasi Prisma 7 dibaca dari `prisma.config.ts`, jadi untuk tes perlu `DATABASE_URL` yang di-set lewat `cross-env` (lihat Fase 9).
 4. **`npm audit`** melaporkan beberapa kerentanan tingkat moderate (7 saat Fase 0) dan ESLint 9.39.5 memberi peringatan "no longer supported". Belum ditinjau.
 5. **Keterbatasan yang disengaja (spec tidak memintanya):**
    - Logout tidak mencabut token JWT; token tetap valid sampai kedaluwarsa. Akun nonaktif tetap ditolak lewat pemuatan ulang user.
    - Tidak ada pembatasan percobaan login.
-6. **Halaman di sidebar belum ada.** Semua link menu (Produk, Cabang, dan seterusnya) masih menampilkan "Halaman tidak ditemukan" di dalam layout sampai fasenya dikerjakan.
+6. **Sebagian halaman di sidebar belum ada.** Produk, Kategori, Cabang, dan User sudah ada (Fase 2). Stok Cabang, Inventaris, Stok Masuk, Transfer, Request Stok, Opname, Riwayat, dan Laporan masih menampilkan "Halaman tidak ditemukan" di dalam layout sampai fasenya dikerjakan.
 7. **Folder kosong dari struktur spec** (`modules/*` selain `auth`, `services/`) belum ada di git. Dibuat saat dipakai.
+8. **Kartu "Stok per cabang" di `/produk/[id]`** dan "Ringkasan stok" di `/cabang/[id]` belum berisi data nyata (stok baru ada setelah Fase 3); ringkasan cabang menampilkan semua produk aktif sebagai "stok menipis" jika `min_stock > 0` karena belum ada stok.
+9. **Fase 2 tidak menguji penolakan cabang saat ada transfer DISETUJUI/DIKIRIM lewat UI**; skenarionya diuji di level API dengan data yang disisipkan lewat psql (lalu dibersihkan). Pengujian lewat UI menunggu fitur transfer (Fase 4).
 
-## 5. Langkah berikutnya: Fase 2 — Data Master
+## 5. Langkah berikutnya: Fase 3 — Stock Service & Stok Masuk
 
-Cakupan (INSTRUCTION.md bagian 12 dan aturan 4.1–4.3):
+Cakupan (INSTRUCTION.md bagian 12, 4.4, 4.7, 4.10, dan prinsip teknis bagian 5):
 
-**Backend** (modul `branches`, `users`, `categories`, `products`; masing-masing `routes/controller/service/schema.ts`, dipasang di bawah penjaga `/api` yang sudah ada dengan `requireRole`):
+- `stockService.applyMovement` sebagai satu-satunya jalan mengubah `branch_stocks` (dalam transaksi, kunci baris `FOR UPDATE`, `qty >= 0`, upsert baris, movement dengan `qty_before`/`qty_after`).
+- Generator nomor dokumen (4.10).
+- Stok Masuk (`/stok-masuk`, Owner dan SuperAdmin): menambah stok gudang utama dan membuat movement.
+- Halaman `/stok` (Owner/SuperAdmin) dan `/inventaris` (Pegawai), serta kartu "Stok per cabang" di `/produk/[id]` dan ringkasan stok di `/cabang/[id]` yang kini masih placeholder/kosong.
+- Seed stok masuk contoh lewat `stockService` (disepakati di Fase 0).
 
-- **Cabang** (Owner): `GET/POST /branches`, `PATCH /branches/:id`, `PATCH /branches/:id/deactivate|activate`.
-  - Tepat satu gudang utama dan tidak bisa diubah menjadi non-main.
-  - Gudang utama tidak bisa dinonaktifkan.
-  - Nonaktif ditolak (409) jika ada transfer `DISETUJUI`/`DIKIRIM` ke cabang itu.
-  - Dalam satu transaksi: `is_active = false`, semua pegawai cabang → `branch_id = NULL`, request `DIAJUKAN` → `DIBATALKAN` ("Cabang dinonaktifkan"), opname `MENUNGGU` → `DITOLAK` (`verify_note` "Cabang dinonaktifkan", `verified_by` = user yang menonaktifkan).
-  - Cabang nonaktif bisa diaktifkan kembali; pegawai tidak otomatis kembali.
-- **User** (Owner): `GET/POST /users`, `PATCH /users/:id` (edit, assign cabang, reset password), `PATCH /users/:id/deactivate|activate`.
-  - Pegawai boleh tanpa cabang; Owner/SuperAdmin wajib `branch_id = NULL`.
-  - Assign hanya ke cabang aktif dan bukan gudang utama.
-  - Owner tidak bisa menonaktifkan diri sendiri; minimal 1 Owner aktif.
-  - Ubah role oleh Owner (Owner/SuperAdmin → cabang dikosongkan; Owner aktif terakhir tidak boleh diturunkan).
-  - Email disimpan huruf kecil (login memakai email yang dinormalisasi).
-- **Kategori** (Owner, SuperAdmin): CRUD; hapus ditolak jika masih dipakai produk.
-- **Produk** (Owner, SuperAdmin): CRUD, aktif/nonaktif; hapus hanya jika belum pernah punya movement (409 jika sudah). `GET /products` untuk Pegawai hanya mengembalikan produk aktif.
+**Kriteria selesai:** stok masuk menambah stok gudang dan membuat movement; saldo konsisten.
 
-**Frontend:** `/cabang`, `/cabang/baru`, `/cabang/[id]`, `/users`, `/users/baru`, `/users/[id]`, `/kategori` (dialog), `/produk`, `/produk/baru`, `/produk/[id]` — tabel dengan paginasi/pencarian/filter/empty state, dialog konfirmasi untuk aksi berisiko, toast `error.message`. Daftar stok per cabang di `/produk/[id]` bergantung pada data stok Fase 3, jadi cukup disiapkan tempatnya. Komponen shadcn tambahan yang akan dibutuhkan: table, dialog/alert-dialog, select, badge, combobox, dan sejenisnya.
-
-**Kriteria selesai:** semua aturan 4.1–4.3 berjalan; nonaktif cabang mengosongkan cabang pegawainya (skenario uji 9, 10, 12 sebagian bisa diuji sejak fase ini).
-
-**Hal yang perlu ditanyakan sebelum mulai Fase 2** (spec belum menetapkan): aturan password (panjang minimum) untuk user baru dan reset password; apakah `GET /branches` perlu mengembalikan cabang nonaktif secara default atau hanya lewat `?active=`; format dan keunikan kode cabang (misalnya huruf besar saja).
+**Yang perlu ditanyakan sebelum mulai** jika spec 4.4 dan 4.10 belum cukup tegas (mis. format nomor dokumen, apakah stok masuk boleh dibatalkan, batas qty per item).
