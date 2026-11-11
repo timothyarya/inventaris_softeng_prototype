@@ -145,3 +145,58 @@ export type TransferDetail = TransferSummary & {
   receivedBy: UserRef | null;
   items: TransferItem[];
 };
+
+export type OpnameStatus = "MENUNGGU" | "DISETUJUI" | "DITOLAK";
+
+export type OpnameUser = { id: number; name: string; role: Role };
+
+export type OpnameSummary = {
+  id: number;
+  docNo: string;
+  branch: BranchRef;
+  /** Tanggal penghitungan, YYYY-MM-DD */
+  date: string;
+  status: OpnameStatus;
+  note: string | null;
+  createdBy: OpnameUser;
+  createdAt: string;
+  verifiedBy: OpnameUser | null;
+  verifiedAt: string | null;
+  itemCount: number;
+  /** Jumlah item yang selisihnya bukan 0. */
+  diffItemCount: number;
+  totalDifference: number;
+};
+
+export type OpnameItem = {
+  id: number;
+  product: { id: number; sku: string; name: string; unit: string; isActive: boolean };
+  qtySystem: number;
+  qtyPhysical: number;
+  difference: number;
+  remark: string | null;
+};
+
+export type OpnameDetail = OpnameSummary & {
+  verifyNote: string | null;
+  /** Role yang berhak memverifikasi (menurut role pembuat). */
+  verifierRoles: Role[];
+  /** Apakah pengguna yang login boleh menyetujui/menolak opname ini sekarang. */
+  canVerify: boolean;
+  items: OpnameItem[];
+};
+
+export type OpnamePrefill = {
+  branch: BranchRef;
+  pendingOpname: { id: number; docNo: string } | null;
+  items: {
+    product: {
+      id: number;
+      sku: string;
+      name: string;
+      unit: string;
+      category: { id: number; name: string } | null;
+    };
+    qtySystem: number;
+  }[];
+};

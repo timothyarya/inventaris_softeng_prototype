@@ -2,7 +2,7 @@
 
 Catatan status pengerjaan. Spesifikasi lengkap ada di [`INSTRUCTION.md`](./INSTRUCTION.md); keputusan tambahan ada di bagian 14 file itu.
 
-_Terakhir diperbarui: 2026-11-11._
+_Terakhir diperbarui: 2026-11-12._
 
 ## 1. Status fase
 
@@ -12,8 +12,9 @@ _Terakhir diperbarui: 2026-11-11._
 | 1    | Auth, RBAC, layout per role                  | **Selesai** | `dd11755`          |
 | 2    | Data master (cabang, user, kategori, produk) | **Selesai** | `5dec2ac`          |
 | 3    | Stock service & stok masuk                   | **Selesai** | `6056011`          |
-| 4    | Transfer stok                                | **Selesai** | commit "Fase 4: …" |
-| 5–9  | Opname → pengujian                           | Belum       | —                  |
+| 4    | Transfer stok                                | **Selesai** | `9cd6ed1`          |
+| 5    | Stok opname                                  | **Selesai** | commit "Fase 5: …" |
+| 6–9  | Riwayat → pengujian                          | Belum       | —                  |
 
 ### Yang sudah ada
 
@@ -23,6 +24,7 @@ _Terakhir diperbarui: 2026-11-11._
 - **Fase 3:** `stockService.applyMovement` (satu-satunya jalan mengubah stok; 422 bila negatif), generator nomor dokumen `generateDocNo` (WIB, atomik), util tanggal WIB, `GET/POST /stock-ins` dan `GET /stock-ins/:id`, `GET /stocks`; seed stok masuk contoh lewat service; frontend `/stok` (Owner/Admin Gudang, pilih cabang), `/inventaris` (Pegawai Cabang), `/stok-masuk`, `/stok-masuk/baru` (form multi-item + konfirmasi), `/stok-masuk/[id]`, kartu "Stok per cabang" di `/produk/[id]`, dan ringkasan stok di `/cabang/[id]` yang kini berisi data.
 
 - **Fase 4:** modul backend `transfers`: `GET /transfers`, `GET /transfers/:id`, `POST /transfers/requests`, `/direct`, `/:id/cancel|approve|reject|send|receive`; kirim memakai `stockService` (`TRANSFER_OUT`) dengan pengecekan stok gudang dan penolakan utuh 422, terima memakai `TRANSFER_IN`; semua aksi mengunci baris transfer sehingga aksi ganda/bersamaan dijawab 409; frontend `/transfer` (tab per status), `/transfer/kirim`, `/transfer/[id]` (riwayat proses, tombol aksi per role+status, dialog qty/alasan), `/request-stok` (tab Request Saya dan Kiriman Masuk), `/request-stok/baru`.
+- **Fase 5:** modul backend `opnames`: `GET /opnames`, `GET /opnames/:id`, `GET /opnames/prefill`, `POST /opnames`, `POST /opnames/:id/approve|reject`; qty sistem dibaca server saat simpan, hanya satu opname MENUNGGU per cabang (409, kunci baris cabang), setujui menerapkan **selisih** ke stok saat ini lewat `stockService` (`OPNAME`) dalam satu transaksi dengan 422 bila stok jadi negatif, tolak wajib catatan; aturan siapa yang boleh memverifikasi menurut role pembuat; frontend `/opname`, `/opname/baru`, `/opname/[id]`.
 
 ## 2. Cara menjalankan
 
@@ -96,6 +98,14 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 - Kirim yang kekurangan stok ditolak utuh dengan 422 yang menyebut semua item yang kurang; nomor dokumen dan stok tidak berubah.
 - Detail transfer memuat `warehouseStock` hanya untuk Owner/Admin Gudang pada status DIAJUKAN/DISETUJUI; `shortfall` bernilai null sebelum diterima.
 
+### Keputusan implementasi Fase 5 (lengkapnya di bagian 14 INSTRUCTION.md)
+
+- Formulir memuat semua produk aktif; hanya baris yang diisi qty fisiknya yang disimpan. Item selisih 0 disimpan; minimal 1 item; produk ganda ditolak; qty fisik 0–1.000.000, maksimal 1.000 item, keterangan maksimal 255 karakter. Tanggal bawaan hari ini (WIB), boleh mundur, tidak boleh masa depan.
+- **Aturan persetujuan (dari pemilik proyek):** opname Pegawai Cabang → Admin Gudang atau Owner; opname Admin Gudang (cabang mana pun, termasuk gudang utama) → hanya Owner; opname Owner → hanya Owner (boleh menyetujui sendiri), Admin Gudang tidak boleh. Dua poin terakhir adalah saran saya yang Anda setujui ("pakai saran"). Penolakan memakai aturan yang sama.
+- Setujui menerapkan selisih ke stok **saat ini**, bukan menimpa: bila stok berubah antara penghitungan dan persetujuan, hasilnya tetap stok sekarang ± selisih (contoh teruji: dihitung 30 → fisik 20, lalu stok naik ke 45 → disetujui menjadi 35).
+- Tidak ada endpoint batal/ubah opname (spec tidak memintanya). Opname salah ditolak lalu dibuat ulang.
+- Pesan 422 saat stok jadi negatif menyebut SKU dan nama produk; opname tetap MENUNGGU sehingga verifikator dapat menolaknya.
+
 ### Penggantian nama role (setelah Fase 4)
 
 - SuperAdmin → **Admin Gudang**, Pegawai → **Pegawai Cabang** (Owner tetap); hak akses sama. Nilai enum di database dan API ikut diganti (`ADMIN_GUDANG`, `PEGAWAI_CABANG`) lewat migrasi `rename_roles`; setelah `git pull` jalankan `npm run db:deploy --workspace backend` (atau `npm run db:migrate`).
@@ -121,32 +131,34 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 ## 4. Masalah yang belum selesai
 
 1. **`npm run db:reset` belum teruji.** Prisma memblokir `migrate reset` dari agen AI tanpa persetujuan eksplisit pemilik proyek. Script sudah diperbaiki (`prisma migrate reset --force && prisma generate && prisma db seed`), tetapi perlu dijalankan sendiri sekali. Perintah itu menghapus semua data database development.
-2. **Skrip uji tidak masuk repo.** Pengujian Fase 1 (46 cek HTTP, 14 cek `requireRole`/scoping, 62 cek browser) Fase 2 (153 cek API, 56 cek browser), Fase 3 (82 cek API, 21 cek langsung ke `stockService`/`generateDocNo`, 50 cek browser), dan Fase 4 (142 cek API termasuk konkurensi, 71 cek browser) dijalankan lewat skrip sementara di folder scratchpad dan tidak di-commit. Tes otomatis di repo baru dibuat di Fase 9 (Vitest + Supertest).
+2. **Skrip uji tidak masuk repo.** Pengujian Fase 1 (46 cek HTTP, 14 cek `requireRole`/scoping, 62 cek browser) Fase 2 (153 cek API, 56 cek browser), Fase 3 (82 cek API, 21 cek langsung ke `stockService`/`generateDocNo`, 50 cek browser), dan Fase 4 (142 cek API termasuk konkurensi, 71 cek browser), dan Fase 5 (105 cek API termasuk konkurensi dan matriks persetujuan, 60 cek browser termasuk layar 390px) dijalankan lewat skrip sementara di folder scratchpad dan tidak di-commit. Tes otomatis di repo baru dibuat di Fase 9 (Vitest + Supertest).
 3. **Database tes belum dipakai.** `softeng_inventaris_test` sudah dibuat tetapi belum dimigrasi. Ingat: URL migrasi Prisma 7 dibaca dari `prisma.config.ts`, jadi untuk tes perlu `DATABASE_URL` yang di-set lewat `cross-env` (lihat Fase 9).
 4. **`npm audit`** melaporkan beberapa kerentanan tingkat moderate (7 saat Fase 0) dan ESLint 9.39.5 memberi peringatan "no longer supported". Belum ditinjau.
 5. **Keterbatasan yang disengaja (spec tidak memintanya):**
    - Logout tidak mencabut token JWT; token tetap valid sampai kedaluwarsa. Akun nonaktif tetap ditolak lewat pemuatan ulang user.
    - Tidak ada pembatasan percobaan login.
-6. **Sebagian halaman di sidebar belum ada.** Produk, Kategori, Cabang, User (Fase 2), Stok Cabang, Inventaris, Stok Masuk (Fase 3), Transfer, dan Request Stok (Fase 4) sudah ada. Opname, Riwayat, dan Laporan masih menampilkan "Halaman tidak ditemukan" di dalam layout sampai fasenya dikerjakan.
+6. **Sebagian halaman di sidebar belum ada.** Produk, Kategori, Cabang, User (Fase 2), Stok Cabang, Inventaris, Stok Masuk (Fase 3), Transfer, Request Stok (Fase 4), dan Stok Opname (Fase 5) sudah ada. Riwayat dan Laporan masih menampilkan "Halaman tidak ditemukan" di dalam layout sampai fasenya dikerjakan.
 7. **Folder kosong dari struktur spec** (`modules/*` selain `auth`, `services/`) belum ada di git. Dibuat saat dipakai.
 8. **Cabang baru tanpa stok:** semua produk aktifnya berstatus Habis (qty 0) sampai ada transfer yang diterima. Wajar.
 9. **Skenario uji 9 (nonaktif cabang dengan transfer DISETUJUI/DIKIRIM)** kini diuji di Fase 4 lewat transfer sungguhan di level API (ditolak 409; DIAJUKAN otomatis dibatalkan setelah transfer selesai). Belum ada pengujian lewat klik di UI untuk skenario ini.
-10. **Data uji dibersihkan manual.** Skrip uji membuat data (transfer, stok masuk, cabang `ZT…`) lalu dihapus lewat skrip pembersih khusus; data yang Anda input sendiri tidak disentuh. Di Fase 9 tes memakai database terpisah sehingga tidak perlu lagi.
+10. **Data uji dibersihkan manual.** Skrip uji membuat data (transfer, stok masuk, opname, cabang `ZT…`/`ZF…`, produk `UJI-…`) lalu dihapus lewat skrip pembersih; data yang Anda input sendiri (stok masuk dan transfer manual) tidak disentuh. Penghitung nomor dokumen hari pengujian ikut dibersihkan agar nomor dokumen Anda tidak melompat. Di Fase 9 tes memakai database terpisah sehingga tidak perlu lagi.
 11. **Cabang yang dinonaktifkan tidak bisa menerima kiriman langsung maupun request**, tetapi transfer yang sudah DISETUJUI/DIKIRIM ke cabang itu memblokir penonaktifan (409) sehingga tidak ada transfer yang menggantung.
 
-## 5. Langkah berikutnya: Fase 5 — Stok Opname
+## 5. Langkah berikutnya: Fase 6 — Riwayat Pergerakan Stok
 
-Cakupan (INSTRUCTION.md bagian 12, aturan 4.6, API bagian 7, sitemap bagian 9):
+Cakupan (INSTRUCTION.md bagian 12, aturan 4.7, API bagian 7, sitemap bagian 9):
 
-**Backend** (modul `opnames`):
+**Backend** (modul `movements`): `GET /movements` dari tabel `stock_movements` (append-only) dengan filter cabang (Owner/Admin Gudang saja; Pegawai Cabang selalu cabangnya sendiri), produk, tipe (`MASUK`, `TRANSFER_OUT`, `TRANSFER_IN`, `OPNAME`), rentang tanggal, dan paginasi. Kolom: waktu, cabang, produk, tipe, qty (+/−), saldo setelah, nomor dokumen referensi, user.
 
-- Buat opname (Pegawai Cabang untuk cabangnya; Owner/Admin Gudang untuk cabang aktif mana pun termasuk gudang utama): sistem mengisi produk aktif dengan `qty_sistem` saat itu, user mengisi `qty_fisik` untuk produk yang dihitung; `selisih = qty_fisik − qty_sistem`; keterangan per item opsional (mis. "retur", "rusak", "hilang").
-- Hanya 1 opname `MENUNGGU` per cabang (409; dijaga juga oleh unique index parsial di DB). Nomor dokumen `OP` (generator sudah ada).
-- **Setujui** (Owner/Admin Gudang): dalam satu transaksi, tiap item berselisih ≠ 0 menambahkan **selisih** ke stok (bukan menimpa) lewat `stockService` (`OPNAME`, bertanda); 422 bila stok jadi negatif. **Tolak:** catatan verifikasi wajib, stok tidak berubah.
-- `GET /opnames` (scoped untuk Pegawai Cabang) dan `GET /opnames/:id`.
+**Frontend:** `/riwayat` (menu "Riwayat Stok" sudah ada untuk semua role): tabel dengan filter di atas; nomor dokumen dapat diklik ke detail (`/stok-masuk/[id]`, `/transfer/[id]` atau `/request-stok`-nya untuk Pegawai Cabang, `/opname/[id]`).
 
-**Frontend:** `/opname` (daftar + form buat, Pegawai Cabang dan Owner/Admin Gudang) dan detail dengan tombol verifikasi untuk Owner/Admin Gudang.
+**Kriteria selesai:** filter dan paginasi berjalan, pegawai hanya melihat cabangnya.
 
-**Kriteria selesai:** opname disetujui mengubah stok sebesar selisih dan tercatat di movement; opname kedua saat masih ada yang menunggu ditolak; stok tidak bisa minus.
+**Yang perlu ditanyakan sebelum mulai** (spec belum tegas):
 
-**Yang perlu ditanyakan sebelum mulai** (spec belum tegas): apakah form opname memuat semua produk aktif sekaligus (isi yang dihitung saja) atau pengguna memilih produk satu per satu; apakah `qty_fisik` yang sama dengan `qty_sistem` (selisih 0) disimpan sebagai item; apakah satu opname boleh tanpa item berselisih; batas jumlah item dan panjang keterangan; rute dan menu (`/opname` untuk semua role, pada spec belum ada rute buat dan detail terpisah).
+1. Tautan nomor dokumen: transfer untuk Pegawai Cabang tidak punya halaman `/transfer/[id]` di menunya (memakai `/request-stok`); apakah tautan cukup ke `/transfer/[id]` (halaman detail sudah bisa dibuka Pegawai Cabang untuk transfer cabangnya) atau perlu dibedakan per role?
+2. Urutan bawaan: terbaru dulu (waktu, lalu id)? Apakah perlu pilihan urutan?
+3. Filter produk: dropdown semua produk aktif, atau pencarian SKU/nama (produk nonaktif yang punya riwayat tetap harus bisa dipilih)?
+4. Rentang tanggal memakai zona WIB dan inklusif (seperti daftar lain); apakah bawaannya kosong (semua) atau mis. 30 hari terakhir?
+5. Ukuran halaman bawaan (20 seperti daftar lain) dan apakah perlu ekspor (spec tidak memintanya; saya anggap tidak).
+6. Tampilan tipe: label Indonesia (Stok masuk, Transfer keluar, Transfer masuk, Opname) dengan warna qty hijau/merah; sesuai?

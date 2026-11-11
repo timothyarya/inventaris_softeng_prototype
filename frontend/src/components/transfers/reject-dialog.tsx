@@ -15,20 +15,37 @@ import { Textarea } from "@/components/ui/textarea";
 
 const MAX_REASON = 1000;
 
-/** Dialog penolakan: alasan wajib diisi (bagian 4.4). */
+type RejectTexts = {
+  /** Judul dialog. */
+  title?: string;
+  /** Penjelasan di bawah judul. */
+  description?: React.ReactNode;
+  /** Label kolom isian. */
+  label?: string;
+  /** Pesan bila isian kosong. */
+  requiredMessage?: string;
+  /** Teks tombol konfirmasi. */
+  confirmLabel?: string;
+};
+
+/**
+ * Dialog penolakan: catatan/alasan wajib diisi (bagian 4.4 dan 4.6).
+ * Teks bawaan untuk request transfer; dokumen lain mengganti lewat props.
+ */
 export function RejectDialog({
   open,
   onOpenChange,
   docNo,
   pending,
   onSubmit,
+  ...texts
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   docNo: string;
   pending: boolean;
   onSubmit: (reason: string) => void;
-}) {
+} & RejectTexts) {
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
       {open && (
@@ -37,6 +54,7 @@ export function RejectDialog({
           pending={pending}
           onSubmit={onSubmit}
           onCancel={() => onOpenChange(false)}
+          {...texts}
         />
       )}
     </Dialog>
@@ -48,18 +66,23 @@ function RejectBody({
   pending,
   onSubmit,
   onCancel,
+  title = "Tolak request?",
+  description,
+  label = "Alasan penolakan",
+  requiredMessage = "Alasan penolakan wajib diisi",
+  confirmLabel = "Tolak",
 }: {
   docNo: string;
   pending: boolean;
   onSubmit: (reason: string) => void;
   onCancel: () => void;
-}) {
+} & RejectTexts) {
   const [reason, setReason] = useState("");
   const [touched, setTouched] = useState(false);
   const trimmed = reason.trim();
   const error =
     trimmed === ""
-      ? "Alasan penolakan wajib diisi"
+      ? requiredMessage
       : trimmed.length > MAX_REASON
         ? `Maksimal ${MAX_REASON} karakter`
         : null;
@@ -77,15 +100,19 @@ function RejectBody({
         }}
       >
         <DialogHeader>
-          <DialogTitle>Tolak request?</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription render={<div />}>
-            Request <span className="font-mono">{docNo}</span> akan ditolak dan tidak dapat diproses
-            lagi. Pegawai Cabang dapat melihat alasannya.
+            {description ?? (
+              <>
+                Request <span className="font-mono">{docNo}</span> akan ditolak dan tidak dapat
+                diproses lagi. Pegawai Cabang dapat melihat alasannya.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5">
           <label htmlFor="reject-reason" className="text-sm font-medium">
-            Alasan penolakan
+            {label}
           </label>
           <Textarea
             id="reject-reason"
@@ -103,7 +130,7 @@ function RejectBody({
           </Button>
           <Button type="submit" variant="destructive" disabled={pending}>
             {pending && <Loader2 className="animate-spin" />}
-            Tolak
+            {confirmLabel}
           </Button>
         </DialogFooter>
       </form>
