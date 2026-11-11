@@ -20,7 +20,7 @@ _Terakhir diperbarui: 2026-11-11._
 - **Fase 0:** npm workspaces (`backend`, `frontend`), Express 5 (ESM) + Prisma 7 (`@prisma/adapter-pg`), PostgreSQL 18, dua migrasi (`init` dan `db_constraints` sesuai bagian 6.1), seed (3 cabang, 4 user, 3 kategori, 10 produk), `/api/health` (dengan `SELECT 1`), Next.js 16 + Tailwind 4 + shadcn/ui, proxy `/api/*` ke Express, ESLint dan Prettier.
 - **Fase 1:** `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`; middleware `authenticate` (memuat ulang user dari DB di setiap request), `requireRole`, `requireAssignedBranch`, `validate`, helper scoping `resolveBranchId`; frontend: halaman login, layout sidebar + header per role (drawer di mobile), halaman 403, `/menunggu-penugasan`, penjaga akses `AppShell`, dashboard placeholder.
 - **Fase 2:** modul backend `branches`, `users`, `categories`, `products` (CRUD, aktif/nonaktif, paginasi, pencarian, filter; nonaktif cabang transaksional dengan efek ke pegawai, transfer DIAJUKAN, dan opname MENUNGGU); utilitas `pagination`, `http`, `password`; frontend `/cabang`, `/cabang/baru`, `/cabang/[id]`, `/users`, `/users/baru`, `/users/[id]`, `/kategori` (dialog), `/produk`, `/produk/baru`, `/produk/[id]` dengan komponen bersama `DataTable`, `ConfirmDialog`, `FormField`, `PageHeader`; hook TanStack Query per modul.
-- **Fase 3:** `stockService.applyMovement` (satu-satunya jalan mengubah stok; 422 bila negatif), generator nomor dokumen `generateDocNo` (WIB, atomik), util tanggal WIB, `GET/POST /stock-ins` dan `GET /stock-ins/:id`, `GET /stocks`; seed stok masuk contoh lewat service; frontend `/stok` (Owner/Admin Cabang, pilih cabang), `/inventaris` (Pegawai Cabang), `/stok-masuk`, `/stok-masuk/baru` (form multi-item + konfirmasi), `/stok-masuk/[id]`, kartu "Stok per cabang" di `/produk/[id]`, dan ringkasan stok di `/cabang/[id]` yang kini berisi data.
+- **Fase 3:** `stockService.applyMovement` (satu-satunya jalan mengubah stok; 422 bila negatif), generator nomor dokumen `generateDocNo` (WIB, atomik), util tanggal WIB, `GET/POST /stock-ins` dan `GET /stock-ins/:id`, `GET /stocks`; seed stok masuk contoh lewat service; frontend `/stok` (Owner/Admin Gudang, pilih cabang), `/inventaris` (Pegawai Cabang), `/stok-masuk`, `/stok-masuk/baru` (form multi-item + konfirmasi), `/stok-masuk/[id]`, kartu "Stok per cabang" di `/produk/[id]`, dan ringkasan stok di `/cabang/[id]` yang kini berisi data.
 
 - **Fase 4:** modul backend `transfers`: `GET /transfers`, `GET /transfers/:id`, `POST /transfers/requests`, `/direct`, `/:id/cancel|approve|reject|send|receive`; kirim memakai `stockService` (`TRANSFER_OUT`) dengan pengecekan stok gudang dan penolakan utuh 422, terima memakai `TRANSFER_IN`; semua aksi mengunci baris transfer sehingga aksi ganda/bersamaan dijawab 409; frontend `/transfer` (tab per status), `/transfer/kirim`, `/transfer/[id]` (riwayat proses, tombol aksi per role+status, dialog qty/alasan), `/request-stok` (tab Request Saya dan Kiriman Masuk), `/request-stok/baru`.
 
@@ -45,7 +45,7 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 
 - `frontend\.env.local` berisi `BACKEND_URL="http://localhost:4000"` (tidak di-commit; contoh ada di `frontend\.env.example`).
 - Cek koneksi: `http://localhost:3000/api/health`.
-- Akun seed (password `SEED_DEFAULT_PASSWORD`, default `password123`): `owner@softeng.local`, `admincabang1@softeng.local`, `admincabang2@softeng.local`, `pegawaicabang1@softeng.local` (CB01), `pegawaicabang2@softeng.local` (CB02).
+- Akun seed (password `SEED_DEFAULT_PASSWORD`, default `password123`): `owner@softeng.local`, `admingudang1@softeng.local`, `admingudang2@softeng.local`, `pegawaicabang1@softeng.local` (CB01), `pegawaicabang2@softeng.local` (CB02).
 - Pemeriksaan kualitas: `npm run lint`, `npm run typecheck`, `npm run format:check`.
 - Seed sekarang juga membuat 1 stok masuk contoh (`npm run db:seed`, idempotent: dilewati jika sudah ada stok masuk).
 - Prisma 7 tidak menjalankan `generate` dan seed otomatis. Gunakan script npm di atas, bukan perintah `prisma` mentah, agar langkahnya lengkap.
@@ -90,16 +90,16 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 
 ### Keputusan implementasi Fase 4 (lengkapnya di bagian 14 INSTRUCTION.md)
 
-- Produk ganda dalam satu request/pengiriman ditolak; qty 1–1.000.000 per item, maksimal 200 baris. Request boleh memuat produk yang stok gudangnya 0 (stok baru dicek saat Kirim). Pegawai Cabang tidak melihat stok gudang; form pengiriman langsung Owner/Admin Cabang menampilkannya.
+- Produk ganda dalam satu request/pengiriman ditolak; qty 1–1.000.000 per item, maksimal 200 baris. Request boleh memuat produk yang stok gudangnya 0 (stok baru dicek saat Kirim). Pegawai Cabang tidak melihat stok gudang; form pengiriman langsung Owner/Admin Gudang menampilkannya.
 - Setujui mengisi `qty_approved` (bawaan = diminta, boleh disesuaikan/0); form Kirim terisi dari `qty_approved` dan boleh diubah. Setujui dan Kirim butuh minimal satu item > 0. Terima: 0 … `qty_sent`, bawaan = dikirim; selisih tidak menjadi movement.
 - Yang menolak dicatat di `approved_by/approved_at` (tidak ada kolom terpisah); membatalkan tidak meminta alasan.
 - Kirim yang kekurangan stok ditolak utuh dengan 422 yang menyebut semua item yang kurang; nomor dokumen dan stok tidak berubah.
-- Detail transfer memuat `warehouseStock` hanya untuk Owner/Admin Cabang pada status DIAJUKAN/DISETUJUI; `shortfall` bernilai null sebelum diterima.
+- Detail transfer memuat `warehouseStock` hanya untuk Owner/Admin Gudang pada status DIAJUKAN/DISETUJUI; `shortfall` bernilai null sebelum diterima.
 
 ### Penggantian nama role (setelah Fase 4)
 
-- SuperAdmin → **Admin Cabang**, Pegawai → **Pegawai Cabang** (Owner tetap); hak akses sama. Nilai enum di database dan API ikut diganti (`ADMIN_CABANG`, `PEGAWAI_CABANG`) lewat migrasi `rename_roles`; setelah `git pull` jalankan `npm run db:deploy --workspace backend` (atau `npm run db:migrate`).
-- Akun seed berganti nama dan email (lihat bagian 2); akun di database diubah di tempat. Akun Admin Cabang boleh lebih dari satu; seed menambah `admincabang2@softeng.local` untuk pengujian. Detail di bagian 14 INSTRUCTION.md.
+- SuperAdmin → **Admin Gudang**, Pegawai → **Pegawai Cabang** (Owner tetap); hak akses sama. Nilai enum di database dan API ikut diganti (`ADMIN_GUDANG`, `PEGAWAI_CABANG`) lewat migrasi `rename_roles`; setelah `git pull` jalankan `npm run db:deploy --workspace backend` (atau `npm run db:migrate`).
+- Akun seed berganti nama dan email (lihat bagian 2); akun di database diubah di tempat. Akun Admin Gudang boleh lebih dari satu; seed menambah `admingudang2@softeng.local` untuk pengujian. Detail di bagian 14 INSTRUCTION.md.
 
 ### Revisi setelah Fase 4: status stok dan role akun sendiri
 
@@ -140,12 +140,12 @@ Cakupan (INSTRUCTION.md bagian 12, aturan 4.6, API bagian 7, sitemap bagian 9):
 
 **Backend** (modul `opnames`):
 
-- Buat opname (Pegawai Cabang untuk cabangnya; Owner/Admin Cabang untuk cabang aktif mana pun termasuk gudang utama): sistem mengisi produk aktif dengan `qty_sistem` saat itu, user mengisi `qty_fisik` untuk produk yang dihitung; `selisih = qty_fisik − qty_sistem`; keterangan per item opsional (mis. "retur", "rusak", "hilang").
+- Buat opname (Pegawai Cabang untuk cabangnya; Owner/Admin Gudang untuk cabang aktif mana pun termasuk gudang utama): sistem mengisi produk aktif dengan `qty_sistem` saat itu, user mengisi `qty_fisik` untuk produk yang dihitung; `selisih = qty_fisik − qty_sistem`; keterangan per item opsional (mis. "retur", "rusak", "hilang").
 - Hanya 1 opname `MENUNGGU` per cabang (409; dijaga juga oleh unique index parsial di DB). Nomor dokumen `OP` (generator sudah ada).
-- **Setujui** (Owner/Admin Cabang): dalam satu transaksi, tiap item berselisih ≠ 0 menambahkan **selisih** ke stok (bukan menimpa) lewat `stockService` (`OPNAME`, bertanda); 422 bila stok jadi negatif. **Tolak:** catatan verifikasi wajib, stok tidak berubah.
+- **Setujui** (Owner/Admin Gudang): dalam satu transaksi, tiap item berselisih ≠ 0 menambahkan **selisih** ke stok (bukan menimpa) lewat `stockService` (`OPNAME`, bertanda); 422 bila stok jadi negatif. **Tolak:** catatan verifikasi wajib, stok tidak berubah.
 - `GET /opnames` (scoped untuk Pegawai Cabang) dan `GET /opnames/:id`.
 
-**Frontend:** `/opname` (daftar + form buat, Pegawai Cabang dan Owner/Admin Cabang) dan detail dengan tombol verifikasi untuk Owner/Admin Cabang.
+**Frontend:** `/opname` (daftar + form buat, Pegawai Cabang dan Owner/Admin Gudang) dan detail dengan tombol verifikasi untuk Owner/Admin Gudang.
 
 **Kriteria selesai:** opname disetujui mengubah stok sebesar selisih dan tercatat di movement; opname kedua saat masih ada yang menunggu ditolak; stok tidak bisa minus.
 

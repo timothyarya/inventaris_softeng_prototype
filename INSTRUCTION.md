@@ -8,7 +8,7 @@
 
 Aplikasi web untuk mengelola inventaris di banyak cabang. Ada satu **gudang utama** (yang secara teknis juga sebuah cabang) sebagai satu-satunya tempat stok masuk dari supplier. Stok didistribusikan dari gudang utama ke cabang-cabang lewat **transfer stok**. Ketepatan stok dijaga lewat **stok opname** yang diverifikasi. Setiap perubahan stok tercatat di **riwayat pergerakan stok** (buku besar).
 
-Role: **Owner**, **Admin Cabang**, **Pegawai Cabang**.
+Role: **Owner**, **Admin Gudang**, **Pegawai Cabang**.
 
 ---
 
@@ -101,14 +101,14 @@ export default defineConfig({
 ## 3. Role & Hak Akses
 
 ### 3.1 Aturan role
-- **Owner** dan **Admin Cabang** tidak terikat cabang (`branch_id = NULL`) dan dapat melihat semua cabang.
+- **Owner** dan **Admin Gudang** tidak terikat cabang (`branch_id = NULL`) dan dapat melihat semua cabang.
 - **Pegawai Cabang** terikat ke **tepat 1 cabang**. Satu cabang boleh punya banyak pegawai.
-- **Gudang utama tidak punya pegawai.** Seluruh operasi gudang utama (stok masuk, pengiriman, opname gudang) dijalankan oleh Owner/Admin Cabang. Pegawai Cabang **tidak boleh** di-assign ke gudang utama (validasi di backend).
+- **Gudang utama tidak punya pegawai.** Seluruh operasi gudang utama (stok masuk, pengiriman, opname gudang) dijalankan oleh Owner/Admin Gudang. Pegawai Cabang **tidak boleh** di-assign ke gudang utama (validasi di backend).
 - Pegawai Cabang dengan `branch_id = NULL` (belum/tidak punya cabang) tetap bisa login, tetapi **hanya** melihat halaman "Menunggu penugasan cabang". Semua endpoint data selain `/auth/*` mengembalikan 403 untuk pegawai ini.
 
 ### 3.2 Matriks akses
 
-| Fitur | Owner | Admin Cabang | Pegawai Cabang |
+| Fitur | Owner | Admin Gudang | Pegawai Cabang |
 |---|---|---|---|
 | Dashboard | Semua cabang | Semua cabang | Cabangnya sendiri |
 | Manajemen Produk & Kategori | CRUD | CRUD | — |
@@ -152,7 +152,7 @@ export default defineConfig({
 ### 4.2 User
 - Field: nama, email (unik), password, role, `branch_id` (nullable), `is_active`.
 - Hanya Owner yang mengelola user.
-- Role `PEGAWAI_CABANG` boleh dibuat dengan atau tanpa cabang. Role `OWNER`/`ADMIN_CABANG` wajib `branch_id = NULL`.
+- Role `PEGAWAI_CABANG` boleh dibuat dengan atau tanpa cabang. Role `OWNER`/`ADMIN_GUDANG` wajib `branch_id = NULL`.
 - **Menonaktifkan user tidak memengaruhi cabangnya.** User nonaktif tidak bisa login, dan semua riwayat transaksinya tetap tersimpan.
 - Owner tidak bisa menonaktifkan dirinya sendiri. Harus selalu ada minimal 1 Owner aktif.
 - Assign/pindah cabang pegawai hanya ke cabang aktif dan bukan gudang utama.
@@ -166,7 +166,7 @@ export default defineConfig({
 
 ### 4.4 Stok Masuk
 - Stok dari supplier **hanya masuk ke gudang utama**. Tidak ada pilihan cabang.
-- Diinput oleh Owner/Admin Cabang.
+- Diinput oleh Owner/Admin Gudang.
 - Field: no. dokumen (otomatis), tanggal, nama supplier (teks bebas), no. faktur (opsional), catatan, daftar item (produk + qty > 0).
 - Saat disimpan, setiap item menambah `branch_stocks` gudang utama dan membuat `stock_movements` bertipe `MASUK`.
 - Stok masuk bersifat final. Tidak ada edit atau hapus. Koreksi dilakukan lewat opname gudang.
@@ -175,23 +175,23 @@ export default defineConfig({
 - **Hanya satu arah: gudang utama → cabang.** `from_branch_id` selalu gudang utama dan `to_branch_id` selalu cabang aktif non-gudang. Tidak ada transfer antar cabang dan tidak ada retur lewat transfer.
 - Dua cara memulai transfer:
   1. **Request dari pegawai**: pegawai mengisi form request untuk cabangnya, status `DIAJUKAN`.
-  2. **Pengiriman langsung** oleh Owner/Admin Cabang lewat form pengiriman. Transfer dibuat langsung berstatus `DIKIRIM`, melewati tahap pengajuan dan persetujuan.
+  2. **Pengiriman langsung** oleh Owner/Admin Gudang lewat form pengiriman. Transfer dibuat langsung berstatus `DIKIRIM`, melewati tahap pengajuan dan persetujuan.
 
 **Alur status:**
 ```
 DIAJUKAN ──(pegawai batalkan)──────────────→ DIBATALKAN
-DIAJUKAN ──(Owner/Admin Cabang tolak + alasan wajib)─→ DITOLAK
-DIAJUKAN ──(Owner/Admin Cabang setujui)──────────────→ DISETUJUI
-DISETUJUI ─(Owner/Admin Cabang isi form pengiriman)──→ DIKIRIM
+DIAJUKAN ──(Owner/Admin Gudang tolak + alasan wajib)─→ DITOLAK
+DIAJUKAN ──(Owner/Admin Gudang setujui)──────────────→ DISETUJUI
+DISETUJUI ─(Owner/Admin Gudang isi form pengiriman)──→ DIKIRIM
 DIKIRIM ───(pegawai cabang tujuan terima)──→ DITERIMA
 ```
 Transisi lain ditolak (409).
 
 **Detail tiap langkah:**
 - **Ajukan** (pegawai): item berisi produk + `qty_diminta` > 0, ditambah catatan opsional.
-- **Setujui** (Owner/Admin Cabang): boleh menyesuaikan qty yang akan dikirim. Stok belum berubah.
-- **Tolak** (Owner/Admin Cabang): `alasan_tolak` wajib diisi.
-- **Kirim** (Owner/Admin Cabang): mengisi `qty_dikirim` per item (boleh berbeda dari diminta, ≥ 0, minimal satu item > 0). Dalam satu transaksi:
+- **Setujui** (Owner/Admin Gudang): boleh menyesuaikan qty yang akan dikirim. Stok belum berubah.
+- **Tolak** (Owner/Admin Gudang): `alasan_tolak` wajib diisi.
+- **Kirim** (Owner/Admin Gudang): mengisi `qty_dikirim` per item (boleh berbeda dari diminta, ≥ 0, minimal satu item > 0). Dalam satu transaksi:
   - Cek stok gudang utama mencukupi untuk tiap item, dengan row lock. Jika kurang, tolak seluruhnya (422) dengan pesan item mana yang kurang.
   - Kurangi stok gudang, lalu buat movement `TRANSFER_OUT` (qty negatif).
 - **Terima** (pegawai cabang tujuan): mengisi `qty_diterima` per item (0 ≤ diterima ≤ dikirim), default = qty_dikirim. Dalam satu transaksi:
@@ -200,21 +200,21 @@ Transisi lain ditolak (409).
 - Simpan siapa dan kapan untuk setiap langkah (`requested_by/at`, `approved_by/at`, `sent_by/at`, `received_by/at`).
 
 ### 4.6 Stok Opname
-- Pegawai Cabang membuat opname untuk cabangnya. Owner/Admin Cabang dapat membuat opname untuk cabang aktif mana pun, termasuk gudang utama.
+- Pegawai Cabang membuat opname untuk cabangnya. Owner/Admin Gudang dapat membuat opname untuk cabang aktif mana pun, termasuk gudang utama.
 - Saat membuat opname, sistem mengisi daftar produk aktif beserta `qty_sistem` (stok saat itu). User mengisi `qty_fisik` untuk produk yang dihitung. Produk yang tidak diisi tidak disertakan.
 - `selisih = qty_fisik − qty_sistem`. Setiap item punya `keterangan` opsional, misalnya "retur ke gudang", "rusak", atau "hilang".
 - **Retur tidak punya fitur sendiri.** Barang yang dikembalikan cabang ke gudang tercatat sebagai selisih minus di opname cabang dan selisih plus di opname gudang, dengan keterangan "retur".
 - Status: `MENUNGGU` → `DISETUJUI` / `DITOLAK`.
 - **Hanya boleh 1 opname berstatus `MENUNGGU` per cabang.** Opname baru ditolak (409) jika masih ada yang menunggu.
-- **Setujui** (Owner/Admin Cabang): dalam satu transaksi, untuk setiap item dengan selisih ≠ 0, tambahkan **selisih** ke stok cabang (bukan menimpa dengan qty_fisik) dan buat movement `OPNAME` sebesar selisih. Alasannya, stok bisa berubah antara waktu hitung dan waktu verifikasi. Stok tidak boleh menjadi negatif. Jika itu terjadi, tolak dengan 422.
-- **Tolak** (Owner/Admin Cabang): catatan verifikasi wajib. Stok tidak berubah, dan pegawai bisa membuat opname baru.
+- **Setujui** (Owner/Admin Gudang): dalam satu transaksi, untuk setiap item dengan selisih ≠ 0, tambahkan **selisih** ke stok cabang (bukan menimpa dengan qty_fisik) dan buat movement `OPNAME` sebesar selisih. Alasannya, stok bisa berubah antara waktu hitung dan waktu verifikasi. Stok tidak boleh menjadi negatif. Jika itu terjadi, tolak dengan 422.
+- **Tolak** (Owner/Admin Gudang): catatan verifikasi wajib. Stok tidak berubah, dan pegawai bisa membuat opname baru.
 
 ### 4.7 Riwayat Pergerakan Stok
 - Sumber data: tabel `stock_movements` (append-only, tidak pernah di-update atau dihapus).
-- Filter: cabang (Owner/Admin Cabang saja), produk, tipe, rentang tanggal. Hasil dipaginasi.
+- Filter: cabang (Owner/Admin Gudang saja), produk, tipe, rentang tanggal. Hasil dipaginasi.
 - Kolom: waktu, cabang, produk, tipe, qty (+/−), saldo setelah, no. dokumen referensi (bisa diklik ke detail), user.
 
-### 4.8 Laporan (Owner & Admin Cabang)
+### 4.8 Laporan (Owner & Admin Gudang)
 Filter umum: **seluruh cabang** atau **pilih cabang**, dan **periode** (tanggal mulai–akhir).
 
 1. **Laporan Stok** per cabang × produk dalam periode:
@@ -230,7 +230,7 @@ Filter umum: **seluruh cabang** atau **pilih cabang**, dan **periode** (tanggal 
 Export (CSV/PDF) **belum** dikerjakan, lihat bagian 13.
 
 ### 4.9 Dashboard
-- **Owner/Admin Cabang** (seluruh cabang, dengan filter cabang opsional):
+- **Owner/Admin Gudang** (seluruh cabang, dengan filter cabang opsional):
   - Kartu: total produk aktif, total cabang aktif, jumlah item stok menipis, request transfer menunggu (`DIAJUKAN`), transfer siap kirim (`DISETUJUI`), opname menunggu verifikasi
   - Tabel stok menipis (cabang, produk, qty, minimum)
   - Grafik distribusi 30 hari terakhir (qty dikirim per cabang)
@@ -285,7 +285,7 @@ datasource db {
 
 enum Role {
   OWNER
-  ADMIN_CABANG
+  ADMIN_GUDANG
   PEGAWAI_CABANG
 }
 
@@ -608,7 +608,7 @@ Validasi aturan-aturan ini **tetap dilakukan di service** agar pesan error rapi 
 ### Seed (`prisma/seed.ts`)
 - 1 cabang gudang utama: kode `GDG`, nama "Gudang Utama", `is_main = true`
 - 2 cabang contoh: `CB01`, `CB02`
-- User: 1 Owner, 1 Admin Cabang, 2 Pegawai Cabang (masing-masing di CB01 dan CB02). Password default dibaca dari `.env` (`SEED_DEFAULT_PASSWORD`) dan dicetak di console saat seed.
+- User: 1 Owner, 1 Admin Gudang, 2 Pegawai Cabang (masing-masing di CB01 dan CB02). Password default dibaca dari `.env` (`SEED_DEFAULT_PASSWORD`) dan dicetak di console saat seed.
 - 3 kategori dan ±10 produk contoh
 - 1 stok masuk contoh ke gudang. Jalankan lewat `stockService` agar movement ikut tercatat.
 
@@ -621,7 +621,7 @@ Validasi aturan-aturan ini **tetap dilakukan di service** agar pesan error rapi 
 | POST | /auth/login | publik | set cookie JWT |
 | POST | /auth/logout | login | hapus cookie |
 | GET | /auth/me | login | profil + role + cabang |
-| GET | /branches | Owner, Admin Cabang | `?active=` (Pegawai Cabang: tidak perlu) |
+| GET | /branches | Owner, Admin Gudang | `?active=` (Pegawai Cabang: tidak perlu) |
 | POST | /branches | Owner | |
 | PATCH | /branches/:id | Owner | edit data |
 | PATCH | /branches/:id/deactivate | Owner | aturan 4.1 |
@@ -630,34 +630,34 @@ Validasi aturan-aturan ini **tetap dilakukan di service** agar pesan error rapi 
 | POST | /users | Owner | |
 | PATCH | /users/:id | Owner | edit + assign cabang + reset password |
 | PATCH | /users/:id/deactivate · /activate | Owner | |
-| GET/POST/PATCH/DELETE | /categories | Owner, Admin Cabang | |
+| GET/POST/PATCH/DELETE | /categories | Owner, Admin Gudang | |
 | GET | /products | semua (Pegawai Cabang: hanya aktif) | pencarian, kategori, status |
-| POST/PATCH | /products(/:id) | Owner, Admin Cabang | |
-| PATCH | /products/:id/deactivate · /activate | Owner, Admin Cabang | |
-| DELETE | /products/:id | Owner, Admin Cabang | aturan 4.3 |
+| POST/PATCH | /products(/:id) | Owner, Admin Gudang | |
+| PATCH | /products/:id/deactivate · /activate | Owner, Admin Gudang | |
+| DELETE | /products/:id | Owner, Admin Gudang | aturan 4.3 |
 | GET | /stocks | semua | `?branchId=` (dipaksa untuk Pegawai Cabang), `?lowOnly=true` |
-| GET | /stock-ins | Owner, Admin Cabang | |
-| GET | /stock-ins/:id | Owner, Admin Cabang | |
-| POST | /stock-ins | Owner, Admin Cabang | |
+| GET | /stock-ins | Owner, Admin Gudang | |
+| GET | /stock-ins/:id | Owner, Admin Gudang | |
+| POST | /stock-ins | Owner, Admin Gudang | |
 | GET | /transfers | semua (Pegawai Cabang: cabangnya) | filter status, cabang, tanggal |
 | GET | /transfers/:id | semua (Pegawai Cabang: cabangnya) | |
 | POST | /transfers/requests | Pegawai Cabang | buat request (DIAJUKAN) |
-| POST | /transfers/direct | Owner, Admin Cabang | pengiriman langsung (DIKIRIM) |
+| POST | /transfers/direct | Owner, Admin Gudang | pengiriman langsung (DIKIRIM) |
 | POST | /transfers/:id/cancel | Pegawai Cabang | |
-| POST | /transfers/:id/approve | Owner, Admin Cabang | |
-| POST | /transfers/:id/reject | Owner, Admin Cabang | |
-| POST | /transfers/:id/send | Owner, Admin Cabang | |
+| POST | /transfers/:id/approve | Owner, Admin Gudang | |
+| POST | /transfers/:id/reject | Owner, Admin Gudang | |
+| POST | /transfers/:id/send | Owner, Admin Gudang | |
 | POST | /transfers/:id/receive | Pegawai Cabang (cabang tujuan) | |
 | GET | /opnames | semua (Pegawai Cabang: cabangnya) | |
 | GET | /opnames/:id | semua (Pegawai Cabang: cabangnya) | |
 | GET | /opnames/prefill?branchId= | semua | daftar produk + qty_sistem |
 | POST | /opnames | semua | aturan 4.6 |
-| POST | /opnames/:id/approve | Owner, Admin Cabang | |
-| POST | /opnames/:id/reject | Owner, Admin Cabang | |
+| POST | /opnames/:id/approve | Owner, Admin Gudang | |
+| POST | /opnames/:id/reject | Owner, Admin Gudang | |
 | GET | /movements | semua (Pegawai Cabang: cabangnya) | filter + paginasi |
 | GET | /dashboard | semua | isi sesuai role (4.9) |
-| GET | /reports/stock | Owner, Admin Cabang | `branchId?`, `from`, `to` |
-| GET | /reports/distribution | Owner, Admin Cabang | `branchId?`, `from`, `to` |
+| GET | /reports/stock | Owner, Admin Gudang | `branchId?`, `from`, `to` |
+| GET | /reports/distribution | Owner, Admin Gudang | `branchId?`, `from`, `to` |
 
 List endpoint memakai paginasi `?page=&pageSize=` dan mengembalikan `{ data, meta: { page, pageSize, total } }`.
 
@@ -676,7 +676,7 @@ List endpoint memakai paginasi `?page=&pageSize=` dan mengembalikan `{ data, met
 8. Riwayat Stok
 9. Laporan (Stok, Distribusi)
 
-**Admin Cabang**: sama dengan Owner tanpa menu **Cabang** dan **User**.
+**Admin Gudang**: sama dengan Owner tanpa menu **Cabang** dan **User**.
 
 **Pegawai Cabang**
 1. Dashboard
@@ -696,25 +696,25 @@ Header menampilkan nama user, role, nama cabang (Pegawai Cabang), dan tombol log
 | `/login` | publik | form login |
 | `/menunggu-penugasan` | Pegawai Cabang tanpa cabang | info + logout |
 | `/dashboard` | semua | sesuai role |
-| `/produk` | Owner, Admin Cabang | tabel produk + cari/filter, aktif/nonaktif |
-| `/produk/baru`, `/produk/[id]` | Owner, Admin Cabang | form produk + stok produk ini di semua cabang |
-| `/kategori` | Owner, Admin Cabang | CRUD kategori (dialog) |
+| `/produk` | Owner, Admin Gudang | tabel produk + cari/filter, aktif/nonaktif |
+| `/produk/baru`, `/produk/[id]` | Owner, Admin Gudang | form produk + stok produk ini di semua cabang |
+| `/kategori` | Owner, Admin Gudang | CRUD kategori (dialog) |
 | `/inventaris` | Pegawai Cabang | produk + stok cabangnya, penanda status stok (Aman, Menipis, Habis) |
-| `/stok` | Owner, Admin Cabang | stok per cabang (pilih cabang), penanda status stok |
+| `/stok` | Owner, Admin Gudang | stok per cabang (pilih cabang), penanda status stok |
 | `/cabang`, `/cabang/baru`, `/cabang/[id]` | Owner | daftar, form, detail (pegawai & ringkasan stok), nonaktif/aktifkan |
 | `/users`, `/users/baru`, `/users/[id]` | Owner | daftar, form, assign cabang, nonaktif/aktifkan |
-| `/stok-masuk`, `/stok-masuk/baru`, `/stok-masuk/[id]` | Owner, Admin Cabang | daftar, form multi-item, detail |
-| `/transfer` | Owner, Admin Cabang | semua pengajuan, dengan tab per status |
-| `/transfer/kirim` | Owner, Admin Cabang | form pengiriman langsung |
+| `/stok-masuk`, `/stok-masuk/baru`, `/stok-masuk/[id]` | Owner, Admin Gudang | daftar, form multi-item, detail |
+| `/transfer` | Owner, Admin Gudang | semua pengajuan, dengan tab per status |
+| `/transfer/kirim` | Owner, Admin Gudang | form pengiriman langsung |
 | `/transfer/[id]` | semua (scoped) | detail + timeline status + tombol aksi sesuai role & status |
 | `/request-stok` | Pegawai Cabang | tab: Request Saya, Kiriman Masuk (DIKIRIM, perlu dikonfirmasi) |
 | `/request-stok/baru` | Pegawai Cabang | form request multi-item |
 | `/opname` | semua (scoped) | daftar opname + status |
-| `/opname/baru` | semua | pilih cabang (Owner/Admin Cabang) → isi qty fisik & keterangan |
-| `/opname/[id]` | semua (scoped) | detail + selisih; tombol setujui/tolak untuk Owner/Admin Cabang |
+| `/opname/baru` | semua | pilih cabang (Owner/Admin Gudang) → isi qty fisik & keterangan |
+| `/opname/[id]` | semua (scoped) | detail + selisih; tombol setujui/tolak untuk Owner/Admin Gudang |
 | `/riwayat` | semua (scoped) | tabel movement + filter |
-| `/laporan/stok` | Owner, Admin Cabang | filter cabang/periode + tabel |
-| `/laporan/distribusi` | Owner, Admin Cabang | filter cabang/periode + rekap & rincian |
+| `/laporan/stok` | Owner, Admin Gudang | filter cabang/periode + tabel |
+| `/laporan/distribusi` | Owner, Admin Gudang | filter cabang/periode + rekap & rincian |
 
 Akses route yang tidak sesuai role mengarah ke halaman 403. Pegawai Cabang tanpa cabang selalu diarahkan ke `/menunggu-penugasan`.
 
@@ -840,7 +840,7 @@ Keputusan di bagian ini melengkapi bagian 1–13. Jika ada pertentangan dengan b
 ### Setup & proses
 - Prisma 7 dan versi stabil terbaru untuk semua paket (lihat bagian 2).
 - Seed Fase 0 hanya berisi cabang (`GDG`, `CB01`, `CB02`), user, kategori, dan produk contoh. **Stok masuk contoh ditambahkan di Fase 3** lewat `stockService`.
-- Akun seed (password dari `SEED_DEFAULT_PASSWORD`): `owner@softeng.local` (Owner), `admincabang1@softeng.local` dan `admincabang2@softeng.local` (Admin Cabang), `pegawaicabang1@softeng.local` (Pegawai Cabang CB01), `pegawaicabang2@softeng.local` (Pegawai Cabang CB02).
+- Akun seed (password dari `SEED_DEFAULT_PASSWORD`): `owner@softeng.local` (Owner), `admingudang1@softeng.local` dan `admingudang2@softeng.local` (Admin Gudang), `pegawaicabang1@softeng.local` (Pegawai Cabang CB01), `pegawaicabang2@softeng.local` (Pegawai Cabang CB02).
 - `/api/health` menjalankan `SELECT 1` ke database.
 - Monorepo memakai **npm workspaces** (`backend`, `frontend`), dengan script root yang berjalan di PowerShell.
 - Fase 0 di frontend hanya memasang Next.js, TypeScript, Tailwind, dan shadcn/ui (init). TanStack Query, React Hook Form, Zod, dan Recharts dipasang saat pertama kali dipakai.
@@ -857,17 +857,17 @@ Keputusan di bagian ini melengkapi bagian 1–13. Jika ada pertentangan dengan b
 - Saat cabang dinonaktifkan, opname berstatus `MENUNGGU` di cabang itu otomatis menjadi `DITOLAK` dalam transaksi yang sama, dengan `verify_note` "Cabang dinonaktifkan" dan `verified_by` = user yang menonaktifkan. Ini menambah langkah 4.1 yang sudah ada.
 
 ### User
-- Owner boleh mengubah role user. Jika berubah menjadi Owner/Admin Cabang, `branch_id` dikosongkan. Jika berubah menjadi Pegawai Cabang, cabang boleh kosong. Owner aktif terakhir tidak boleh diturunkan role-nya.
+- Owner boleh mengubah role user. Jika berubah menjadi Owner/Admin Gudang, `branch_id` dikosongkan. Jika berubah menjadi Pegawai Cabang, cabang boleh kosong. Owner aktif terakhir tidak boleh diturunkan role-nya.
 
 ### Menu
-- Owner dan Admin Cabang mendapat menu **Stok Cabang** (route `/stok`), diletakkan tepat setelah menu Produk.
+- Owner dan Admin Gudang mendapat menu **Stok Cabang** (route `/stok`), diletakkan tepat setelah menu Produk.
 
 ### Stok menipis
 - **Tiga status stok** per produk di satu cabang (revisi setelah Fase 4): **Aman**, **Menipis** (kuning), dan **Habis** (merah). Hanya produk aktif yang dipantau; produk nonaktif yang masih punya stok selalu ditampilkan sebagai Aman (dengan label "Produk nonaktif").
   - **Habis:** qty = 0, berapa pun stok minimumnya (produk dengan `min_stock = 0` yang stoknya 0 juga Habis).
   - **Menipis:** qty > 0 tetapi di bawah stok minimum (`0 < qty < min_stock`, hanya bila `min_stock > 0`).
   - **Aman:** selain itu.
-  - Produk tanpa baris `branch_stocks` dianggap qty 0 (jadi Habis). Gudang utama ikut dihitung di dashboard Owner/Admin Cabang.
+  - Produk tanpa baris `branch_stocks` dianggap qty 0 (jadi Habis). Gudang utama ikut dihitung di dashboard Owner/Admin Gudang.
   - Kartu/tabel "stok menipis" di dashboard (Fase 7) dan laporan (Fase 8) menampilkan **Menipis dan Habis secara terpisah**; keduanya adalah item yang perlu perhatian.
 
 ### Dashboard
@@ -886,15 +886,15 @@ Keputusan di bagian ini melengkapi bagian 1–13. Jika ada pertentangan dengan b
 
 ### Implementasi Fase 2 (data master)
 - **Password:** minimal 8 dan maksimal 72 karakter (batas bcrypt), berlaku untuk user baru dan reset password. Hash bcrypt cost 10; password tidak pernah dikembalikan API.
-- **`GET /branches`** mengembalikan semua cabang (aktif dan nonaktif), diurutkan gudang utama dulu lalu kode. Filter opsional `?active=true|false`, `?q=` (kode/nama), dan paginasi. Daftar ini boleh dibaca Owner dan Admin Cabang (untuk dropdown/filter di halaman lain); semua rute cabang lainnya hanya Owner. Cabang yang tidak ada dijawab 404.
+- **`GET /branches`** mengembalikan semua cabang (aktif dan nonaktif), diurutkan gudang utama dulu lalu kode. Filter opsional `?active=true|false`, `?q=` (kode/nama), dan paginasi. Daftar ini boleh dibaca Owner dan Admin Gudang (untuk dropdown/filter di halaman lain); semua rute cabang lainnya hanya Owner. Cabang yang tidak ada dijawab 404.
 - **Kode cabang:** hanya huruf besar dan angka, 2–20 karakter; input huruf kecil dinormalisasi ke huruf besar; unik. Kode **tidak dapat diubah** setelah dibuat (`PATCH /branches/:id` hanya menerima `name`, `address`, `phone`; mengirim `code`, `isMain`, atau `isActive` ditolak 400). Cabang baru selalu `is_main = false`.
 - **Penulisan cabang di UI:** di semua tempat kode cabang ditampilkan, nama cabang ikut ditampilkan dengan format `KODE — Nama` (contoh `CB01 — Cabang 01`), lewat helper `formatBranch` di frontend.
-- **Endpoint tambahan** di luar tabel bagian 7, dibutuhkan halaman detail: `GET /branches/:id` (cabang + daftar pegawai + ringkasan stok: produk aktif, produk ada stok, total qty, stok menipis), `GET /users/:id`, dan `GET /products/:id`. Hak aksesnya sama dengan rute induknya (cabang dan user: Owner; produk: Owner dan Admin Cabang).
+- **Endpoint tambahan** di luar tabel bagian 7, dibutuhkan halaman detail: `GET /branches/:id` (cabang + daftar pegawai + ringkasan stok: produk aktif, produk ada stok, total qty, stok menipis), `GET /users/:id`, dan `GET /products/:id`. Hak aksesnya sama dengan rute induknya (cabang dan user: Owner; produk: Owner dan Admin Gudang).
 - **Filter user:** `GET /users` menerima `q`, `role`, `status=active|inactive`, dan `branchId` (id cabang atau `none` untuk yang belum punya cabang). Di UI, "Pegawai Cabang tanpa cabang" memaksa `role=PEGAWAI_CABANG`.
 - **Respons penonaktifan cabang** memuat `effects`: `usersReleased`, `transfersCancelled`, `opnamesRejected`. Pengaktifan kembali cabang tidak mengembalikan pegawai.
 - **Kode error bisnis (409):** `MAIN_BRANCH_PROTECTED`, `BRANCH_STATE_UNCHANGED`, `BRANCH_HAS_OPEN_TRANSFERS`, `MAIN_BRANCH_NO_STAFF`, `BRANCH_INACTIVE`, `LAST_OWNER`, `SELF_DEACTIVATE`, `USER_STATE_UNCHANGED`, `EMAIL_DUPLICATE`, `SKU_DUPLICATE`, `CATEGORY_DUPLICATE`, `CATEGORY_IN_USE`, `PRODUCT_HAS_MOVEMENTS`, `PRODUCT_IN_DOCUMENTS`. Pelanggaran foreign key yang lolos dipetakan ke 409 "Data masih dipakai oleh data lain."
 - **Hapus produk** ditolak (409) bila sudah punya movement **atau** sudah tercantum di dokumen (transfer/opname); produk seperti itu cukup dinonaktifkan. Nama kategori dan SKU unik tanpa memedulikan huruf besar/kecil; SKU di-trim.
-- **`GET /products`** untuk Pegawai Cabang hanya mengembalikan produk aktif. Di frontend halaman `/produk` dan `/kategori` tetap hanya untuk Owner dan Admin Cabang (sitemap bagian 9).
+- **`GET /products`** untuk Pegawai Cabang hanya mengembalikan produk aktif. Di frontend halaman `/produk` dan `/kategori` tetap hanya untuk Owner dan Admin Gudang (sitemap bagian 9).
 - **Frontend:** setelah simpan berhasil, halaman detail dimuat ulang dan form diinisialisasi ulang lewat `key={updatedAt}`; karena itu aksi di halaman detail memakai `mutateAsync` (callback `mutate()` hilang saat komponen di-remount).
 
 ### Implementasi Fase 3 (stock service & stok masuk)
@@ -902,27 +902,28 @@ Keputusan di bagian ini melengkapi bagian 1–13. Jika ada pertentangan dengan b
 - **Nomor dokumen** (`backend/src/services/docNumber.ts`, `generateDocNo(tx, prefix)`): format `PREFIX-YYYYMMDD-NNNN` dengan query atomik pada `doc_counters`, tanggal WIB. Tanggal pada nomor adalah **tanggal pembuatan dokumen (hari ini, WIB)**, bukan tanggal faktur yang diisi user. Counter ikut rollback bila transaksi gagal, sehingga tidak ada nomor yang bolong.
 - **Stok masuk:** tanggal dokumen boleh diisi mundur (mis. tanggal faktur lama), default hari ini (WIB), dan **tidak boleh di masa depan** (400). Produk yang sama di dua baris item **ditolak** (400, "Produk dipilih lebih dari sekali"); di form, produk yang sudah dipilih tidak ditawarkan lagi di baris lain. Qty per item 1–1.000.000 (mencegah salah ketik) dan maksimal 200 baris item per dokumen. Produk nonaktif ditolak 409 `PRODUCT_INACTIVE`; gudang utama nonaktif ditolak 409 `MAIN_BRANCH_INACTIVE`. Tidak ada endpoint ubah/hapus (final). Form meminta konfirmasi sebelum menyimpan.
 - **`GET /stock-ins`** mendukung `?q=` (no. dokumen, supplier, no. faktur), `?from=` dan `?to=` (tanggal dokumen, YYYY-MM-DD), serta paginasi; diurutkan tanggal lalu id terbaru. Daftar memuat `itemCount` dan `totalQty`; `GET /stock-ins/:id` memuat item beserta produknya.
-- **`GET /stocks`** (semua role) mengembalikan baris cabang × produk: `{ branch, product, qty, isLow }`. Parameter: `branchId` (diabaikan untuk Pegawai Cabang, selalu cabangnya), `productId`, `q` (SKU/nama), `lowOnly=true`, paginasi. Tanpa `branchId`, Owner/Admin Cabang mendapat semua **cabang aktif** (cabang nonaktif hanya muncul bila dipilih langsung lewat `branchId`). Produk tanpa baris `branch_stocks` dihitung qty 0. Produk nonaktif hanya tampil bila masih ada stoknya, dan tidak pernah tampil untuk Pegawai Cabang. `isLow` mengikuti definisi stok menipis di atas. `branchId` atau `productId` yang tidak ada dijawab 404.
-- **`/stok`** (Owner/Admin Cabang): dropdown semua cabang (cabang nonaktif diberi tanda), default gudang utama, pencarian, dan filter status (semua, menipis saja, habis saja). **`/inventaris`** (Pegawai Cabang): tampilan yang sama untuk cabangnya sendiri, tanpa dropdown. `/produk/[id]` menampilkan stok produk di semua cabang aktif.
+- **`GET /stocks`** (semua role) mengembalikan baris cabang × produk: `{ branch, product, qty, isLow }`. Parameter: `branchId` (diabaikan untuk Pegawai Cabang, selalu cabangnya), `productId`, `q` (SKU/nama), `lowOnly=true`, paginasi. Tanpa `branchId`, Owner/Admin Gudang mendapat semua **cabang aktif** (cabang nonaktif hanya muncul bila dipilih langsung lewat `branchId`). Produk tanpa baris `branch_stocks` dihitung qty 0. Produk nonaktif hanya tampil bila masih ada stoknya, dan tidak pernah tampil untuk Pegawai Cabang. `isLow` mengikuti definisi stok menipis di atas. `branchId` atau `productId` yang tidak ada dijawab 404.
+- **`/stok`** (Owner/Admin Gudang): dropdown semua cabang (cabang nonaktif diberi tanda), default gudang utama, pencarian, dan filter status (semua, menipis saja, habis saja). **`/inventaris`** (Pegawai Cabang): tampilan yang sama untuk cabangnya sendiri, tanpa dropdown. `/produk/[id]` menampilkan stok produk di semua cabang aktif.
 - **Seed** menambah satu stok masuk contoh (`PT Supplier Contoh`, 9 produk) lewat `createStockIn`, hanya bila belum ada stok masuk sama sekali. Sengaja ada produk di bawah stok minimum (ATK-004, ELK-002) dan tanpa stok (MKN-003) agar penanda Menipis dan Habis bisa dicoba.
 
 ### Implementasi Fase 4 (transfer stok)
-- **Endpoint** (modul `transfers`, semua di bawah `/api/transfers`): `GET /` dan `GET /:id` (semua role; Pegawai Cabang hanya transfer menuju cabangnya, selain itu 404), `POST /requests` (Pegawai Cabang), `POST /direct` (Owner/Admin Cabang), `POST /:id/cancel` (Pegawai Cabang), `POST /:id/approve`, `/:id/reject`, `/:id/send` (Owner/Admin Cabang), `POST /:id/receive` (Pegawai Cabang). Respons objek tunggal `{ data: transfer }`. Aksi yang menerima daftar item (`approve`, `send`, `receive`) boleh dipanggil tanpa body: nilai bawaannya dipakai.
-- **Request Pegawai Cabang:** selalu untuk cabang Pegawai Cabang sendiri (`toBranchId` di body diabaikan). Produk ganda dalam satu dokumen **ditolak** (400), qty per item 1–1.000.000, maksimal 200 baris. Request **boleh memuat produk yang stok gudangnya 0**: stok baru dicek saat Kirim. Form request Pegawai Cabang tidak menampilkan stok gudang; form pengiriman langsung (Owner/Admin Cabang) menampilkan stok gudang di samping tiap produk dan memberi peringatan bila qty melebihi stok.
+- **Endpoint** (modul `transfers`, semua di bawah `/api/transfers`): `GET /` dan `GET /:id` (semua role; Pegawai Cabang hanya transfer menuju cabangnya, selain itu 404), `POST /requests` (Pegawai Cabang), `POST /direct` (Owner/Admin Gudang), `POST /:id/cancel` (Pegawai Cabang), `POST /:id/approve`, `/:id/reject`, `/:id/send` (Owner/Admin Gudang), `POST /:id/receive` (Pegawai Cabang). Respons objek tunggal `{ data: transfer }`. Aksi yang menerima daftar item (`approve`, `send`, `receive`) boleh dipanggil tanpa body: nilai bawaannya dipakai.
+- **Request Pegawai Cabang:** selalu untuk cabang Pegawai Cabang sendiri (`toBranchId` di body diabaikan). Produk ganda dalam satu dokumen **ditolak** (400), qty per item 1–1.000.000, maksimal 200 baris. Request **boleh memuat produk yang stok gudangnya 0**: stok baru dicek saat Kirim. Form request Pegawai Cabang tidak menampilkan stok gudang; form pengiriman langsung (Owner/Admin Gudang) menampilkan stok gudang di samping tiap produk dan memberi peringatan bila qty melebihi stok.
 - **Pengiriman langsung:** tujuan harus cabang aktif non-gudang (404 bila tidak ada, 409 `MAIN_BRANCH_NOT_DESTINATION`, 409 `BRANCH_INACTIVE`). Aturan produk/qty sama dengan request. Transfer langsung dibuat berstatus `DIKIRIM` dan stok gudang langsung berkurang; `qty_requested` dan `qty_approved` bernilai null serta `requested_by/at` kosong. Jenis ("Request cabang" / "Pengiriman langsung") ditentukan dari `requested_at` terisi atau tidak (`origin` = `REQUEST` | `DIRECT`).
 - **Setujui:** mengisi `qty_approved` (bawaan = `qty_requested`, boleh disesuaikan per item, boleh 0). Minimal satu item harus > 0 (400). **Kirim:** jumlah kirim terisi dari `qty_approved` dan boleh diubah; minimal satu item > 0. Setujui tidak mengubah stok.
 - **Tolak:** alasan wajib (1–1000 karakter, spasi saja ditolak). Karena skema tidak punya kolom pengambil keputusan terpisah, **yang menolak dicatat di `approved_by/approved_at`**. **Batalkan** (Pegawai Cabang, hanya DIAJUKAN) tidak meminta alasan; pembatalan otomatis oleh penonaktifan cabang mengisi `cancel_reason` "Cabang dinonaktifkan".
 - **Kirim** mengunci baris stok gudang, mengumpulkan **semua** item yang kurang, dan menolak seluruh pengiriman dengan **422 `INSUFFICIENT_STOCK`** yang menyebut SKU, nama, stok tersedia, dan jumlah dibutuhkan; status dan stok tidak berubah, nomor dokumen tidak terpakai. Bila cukup, mengurangi stok per item lewat `stockService` (`TRANSFER_OUT`, negatif, urut `productId`). Item ber-qty 0 tidak membuat movement.
 - **Terima:** hanya Pegawai Cabang tujuan. Jumlah diterima per item 0 … `qty_sent` (lebih dari dikirim = 400); bawaan = `qty_sent`. Semua item boleh 0. Stok cabang bertambah sebesar jumlah diterima (`TRANSFER_IN`); item ber-qty 0 tidak membuat movement. **Selisih** (`qty_sent − qty_received`) tidak menjadi movement; ditampilkan di detail (`shortfall`, null sebelum diterima) dan nanti di Laporan Distribusi.
 - **Konkurensi:** setiap aksi mengunci baris transfer (`FOR UPDATE`) lalu membaca ulang status di dalam transaksi; transisi yang tidak valid atau aksi ganda dijawab **409 `INVALID_TRANSITION`**. Produk nonaktif setelah dokumen DISETUJUI/DIKIRIM tetap dapat dikirim/diterima (larangan produk nonaktif hanya untuk dokumen baru; 409 `PRODUCT_INACTIVE`).
-- **`GET /transfers`:** `page`, `pageSize`, `q` (no. dokumen atau kode/nama cabang tujuan), `status` (satu atau beberapa dipisah koma), `branchId` (cabang tujuan; diabaikan untuk Pegawai Cabang), `origin=request|direct`, `from`/`to` (tanggal dibuat, WIB, inklusif; `from > to` = 400). Diurutkan terbaru dulu. Daftar dan detail memuat `itemCount`, `totalRequested`, `totalSent`, `totalReceived` (null bila belum relevan). Detail memuat siapa dan kapan tiap langkah (`requestedBy`, `approvedBy`, `sentBy`, `receivedBy` beserta waktunya) serta, **hanya untuk Owner/Admin Cabang pada status DIAJUKAN/DISETUJUI**, `warehouseStock` per item.
+- **`GET /transfers`:** `page`, `pageSize`, `q` (no. dokumen atau kode/nama cabang tujuan), `status` (satu atau beberapa dipisah koma), `branchId` (cabang tujuan; diabaikan untuk Pegawai Cabang), `origin=request|direct`, `from`/`to` (tanggal dibuat, WIB, inklusif; `from > to` = 400). Diurutkan terbaru dulu. Daftar dan detail memuat `itemCount`, `totalRequested`, `totalSent`, `totalReceived` (null bila belum relevan). Detail memuat siapa dan kapan tiap langkah (`requestedBy`, `approvedBy`, `sentBy`, `receivedBy` beserta waktunya) serta, **hanya untuk Owner/Admin Gudang pada status DIAJUKAN/DISETUJUI**, `warehouseStock` per item.
 - **Frontend:** `/transfer` (tab per status + filter cabang, jenis, tanggal, pencarian), `/transfer/kirim`, `/transfer/[id]` (riwayat proses, tabel item dengan kolom sesuai tahap, tombol aksi menurut role dan status; dialog qty untuk setujui/kirim/terima, dialog alasan untuk tolak, konfirmasi untuk batalkan), `/request-stok` (tab "Request Saya" dan "Kiriman Masuk" lewat `?tab=masuk`), `/request-stok/baru`. Saat pengiriman gagal 422, dialog tetap terbuka dan pesan menyebut item yang kurang.
 
 ### Perubahan nama role (setelah Fase 4)
-- Nama role diganti: **Owner** (tetap), **SuperAdmin → Admin Cabang**, **Pegawai → Pegawai Cabang**. Hak akses tidak berubah. Seluruh isi dokumen ini sudah memakai nama baru; "Owner/Admin Cabang" menggantikan singkatan lama "Owner/SA", dan kata "pegawai" huruf kecil dalam kalimat berarti Pegawai Cabang.
-- **Nilai internal ikut diganti:** enum `Role` menjadi `OWNER`, `ADMIN_CABANG`, `PEGAWAI_CABANG` (migrasi `rename_roles` memakai `ALTER TYPE … RENAME VALUE`, data user tetap). API menerima dan mengembalikan nilai baru; nilai lama (`SUPERADMIN`, `PEGAWAI`) ditolak 400.
-- **Akun seed:** `admincabang1@softeng.local` ("Admin Cabang 1"), `admincabang2@softeng.local` ("Admin Cabang 2"), `pegawaicabang1@softeng.local` ("Pegawai Cabang CB01"), `pegawaicabang2@softeng.local` ("Pegawai Cabang CB02"); Owner tetap `owner@softeng.local`. Akun yang sudah ada di database diubah di tempat (ID dan password tetap); email lama tidak berlaku lagi.
-- **Akun Admin Cabang boleh lebih dari satu**, sama seperti Pegawai Cabang. Satu-satunya pembatas jumlah adalah Owner (minimal 1 Owner aktif). Admin Cabang wajib tanpa cabang.
+- **Catatan penamaan:** role tengah sempat bernama "Admin Cabang" lalu diperbaiki menjadi **Admin Gudang** (migrasi `rename_admin_gudang`). Jumlah role tetap tiga. Setiap kemunculan "Admin Cabang" di riwayat/commit lama berarti Admin Gudang.
+- Nama role diganti: **Owner** (tetap), **SuperAdmin → Admin Gudang**, **Pegawai → Pegawai Cabang**. Hak akses tidak berubah. Seluruh isi dokumen ini sudah memakai nama baru; "Owner/Admin Gudang" menggantikan singkatan lama "Owner/SA", dan kata "pegawai" huruf kecil dalam kalimat berarti Pegawai Cabang.
+- **Nilai internal ikut diganti:** enum `Role` menjadi `OWNER`, `ADMIN_GUDANG`, `PEGAWAI_CABANG` (migrasi `rename_roles` memakai `ALTER TYPE … RENAME VALUE`, data user tetap). API menerima dan mengembalikan nilai baru; nilai lama (`SUPERADMIN`, `PEGAWAI`) ditolak 400.
+- **Akun seed:** `admingudang1@softeng.local` ("Admin Gudang 1"), `admingudang2@softeng.local` ("Admin Gudang 2"), `pegawaicabang1@softeng.local` ("Pegawai Cabang CB01"), `pegawaicabang2@softeng.local` ("Pegawai Cabang CB02"); Owner tetap `owner@softeng.local`. Akun yang sudah ada di database diubah di tempat (ID dan password tetap); email lama tidak berlaku lagi.
+- **Akun Admin Gudang boleh lebih dari satu**, sama seperti Pegawai Cabang. Satu-satunya pembatas jumlah adalah Owner (minimal 1 Owner aktif). Admin Gudang wajib tanpa cabang.
 
 ### Revisi: status stok tiga tingkat dan role akun sendiri
 - **`GET /stocks`** kini mengembalikan `status` (`AMAN` | `MENIPIS` | `HABIS`) menggantikan `isLow`. Filter baru `?status=AMAN|MENIPIS|HABIS` (selain itu 400); `?lowOnly=true` tetap ada dan berarti MENIPIS atau HABIS. Aturan status ada di satu tempat (`backend/src/modules/stocks/status.ts`), dan kondisi SQL filter mengikutinya.

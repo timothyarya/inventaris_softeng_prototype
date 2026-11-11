@@ -36,7 +36,7 @@ const noDuplicateProducts = (value: { items: { productId: string }[] }, ctx: z.R
 
 /**
  * Satu bentuk nilai form untuk kedua mode. Request Pegawai Cabang memakai cabangnya sendiri
- * (toBranchId tidak diisi); pengiriman langsung Owner/Admin Cabang wajib memilih tujuan.
+ * (toBranchId tidak diisi); pengiriman langsung Owner/Admin Gudang wajib memilih tujuan.
  */
 export const transferFormSchema = (requireBranch: boolean) =>
   z

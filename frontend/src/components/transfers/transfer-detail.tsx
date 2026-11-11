@@ -90,7 +90,7 @@ function Content({
   const receive = useReceiveTransfer(t.id);
   const cancel = useCancelTransfer(t.id);
 
-  const isAdmin = role === "OWNER" || role === "ADMIN_CABANG";
+  const isAdmin = role === "OWNER" || role === "ADMIN_GUDANG";
   const isPegawai = role === "PEGAWAI_CABANG";
   const canApprove = isAdmin && t.status === "DIAJUKAN";
   const canSend = isAdmin && t.status === "DISETUJUI";
@@ -421,7 +421,7 @@ function statusHint(t: TransferDetail, role: Role): string {
     case "DIAJUKAN":
       return admin
         ? "Menunggu keputusan Anda: setujui (jumlah dapat disesuaikan) atau tolak dengan alasan."
-        : "Menunggu persetujuan Owner atau Admin Cabang. Request masih dapat dibatalkan.";
+        : "Menunggu persetujuan Owner atau Admin Gudang. Request masih dapat dibatalkan.";
     case "DISETUJUI":
       return admin
         ? "Siap dikirim. Stok gudang dicek dan dikurangi saat Anda menekan Kirim."

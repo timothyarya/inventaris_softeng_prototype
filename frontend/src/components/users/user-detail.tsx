@@ -82,7 +82,7 @@ function UserDetailView({ user }: { user: ManagedUser }) {
         name: values.name,
         email: values.email,
         role: values.role,
-        // Untuk Owner/Admin Cabang backend mengosongkan cabang sendiri.
+        // Untuk Owner/Admin Gudang backend mengosongkan cabang sendiri.
         ...(values.role === "PEGAWAI_CABANG"
           ? { branchId: values.branchId ? Number(values.branchId) : null }
           : {}),

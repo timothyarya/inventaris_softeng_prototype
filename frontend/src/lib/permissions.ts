@@ -74,7 +74,7 @@ const MENUS: Record<Role, MenuItem[]> = {
     { label: "User", icon: Users, href: "/users" },
     ...ADMIN_MENU_AFTER_MASTER,
   ],
-  ADMIN_CABANG: [...ADMIN_MENU_BEFORE_MASTER, ...ADMIN_MENU_AFTER_MASTER],
+  ADMIN_GUDANG: [...ADMIN_MENU_BEFORE_MASTER, ...ADMIN_MENU_AFTER_MASTER],
   PEGAWAI_CABANG: [
     DASHBOARD,
     { label: "Inventaris", icon: Boxes, href: "/inventaris" },
@@ -96,7 +96,7 @@ export function getMenu(role: Role): MenuItem[] {
   return MENUS[role];
 }
 
-const ADMIN: Role[] = ["OWNER", "ADMIN_CABANG"];
+const ADMIN: Role[] = ["OWNER", "ADMIN_GUDANG"];
 
 /** Aturan akses route (bagian 9). Prefiks terpanjang yang cocok yang berlaku. */
 const ROUTE_RULES: { path: string; exact?: boolean; roles: Role[] | "all" }[] = [

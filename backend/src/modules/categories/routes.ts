@@ -7,8 +7,8 @@ import { categoryBodySchema, listCategoriesQuerySchema } from "./schema";
 
 export const categoriesRouter = Router();
 
-// Bagian 7: kategori dikelola Owner dan Admin Cabang.
-categoriesRouter.use(requireRole("OWNER", "ADMIN_CABANG"));
+// Bagian 7: kategori dikelola Owner dan Admin Gudang.
+categoriesRouter.use(requireRole("OWNER", "ADMIN_GUDANG"));
 
 categoriesRouter.get("/", validate(listCategoriesQuerySchema, "query"), controller.list);
 categoriesRouter.post("/", validate(categoryBodySchema), controller.create);

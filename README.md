@@ -55,8 +55,8 @@ Akun seed (password dari `SEED_DEFAULT_PASSWORD`, default `password123`):
 | Role           | Email                          | Cabang |
 | -------------- | ------------------------------ | ------ |
 | Owner          | `owner@softeng.local`          | —      |
-| Admin Cabang   | `admincabang1@softeng.local`   | —      |
-| Admin Cabang   | `admincabang2@softeng.local`   | —      |
+| Admin Gudang   | `admingudang1@softeng.local`   | —      |
+| Admin Gudang   | `admingudang2@softeng.local`   | —      |
 | Pegawai Cabang | `pegawaicabang1@softeng.local` | CB01   |
 | Pegawai Cabang | `pegawaicabang2@softeng.local` | CB02   |
 

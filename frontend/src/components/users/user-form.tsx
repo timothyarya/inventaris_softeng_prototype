@@ -14,7 +14,7 @@ import { formatBranch } from "@/lib/format";
 import type { ManagedUser } from "@/lib/types";
 import { userCreateSchema, userEditSchema, type UserFormValues } from "./user-schema";
 
-const ROLES: Role[] = ["OWNER", "ADMIN_CABANG", "PEGAWAI_CABANG"];
+const ROLES: Role[] = ["OWNER", "ADMIN_GUDANG", "PEGAWAI_CABANG"];
 
 export function UserForm({
   mode,
@@ -97,7 +97,7 @@ export function UserForm({
             ? "Role akun Anda sendiri tidak dapat diubah agar Anda tidak kehilangan akses."
             : role === "PEGAWAI_CABANG"
               ? undefined
-              : "Owner dan Admin Cabang tidak terikat cabang; penugasan cabang akan dikosongkan."
+              : "Owner dan Admin Gudang tidak terikat cabang; penugasan cabang akan dikosongkan."
         }
       >
         {lockRole ? (

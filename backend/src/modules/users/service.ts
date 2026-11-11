@@ -106,7 +106,7 @@ export async function createUser(input: CreateUserInput) {
 
 /**
  * Edit user, assign/pindah cabang, ubah role, dan reset password (bagian 4.2 + keputusan 14).
- * - Role Owner/Admin Cabang: branch_id dikosongkan otomatis.
+ * - Role Owner/Admin Gudang: branch_id dikosongkan otomatis.
  * - Role Pegawai Cabang: cabang boleh kosong; bila diisi harus cabang aktif dan bukan gudang utama.
  * - Role akun sendiri tidak boleh diubah (mencegah kehilangan akses); nama, email, password boleh.
  * - Owner aktif terakhir tidak boleh diturunkan role-nya.
@@ -136,7 +136,7 @@ export async function updateUser(id: number, input: UpdateUserInput, actorId: nu
       }
     } else {
       if (input.branchId != null) {
-        throw badRequest("Owner/Admin Cabang tidak boleh terikat ke cabang");
+        throw badRequest("Owner/Admin Gudang tidak boleh terikat ke cabang");
       }
       finalBranchId = null;
     }

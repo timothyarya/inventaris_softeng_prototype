@@ -10,10 +10,10 @@ export const branchesRouter = Router();
 const owner = requireRole("OWNER");
 const idParam = validate(idParamSchema, "params");
 
-// Bagian 7: daftar boleh dilihat Owner dan Admin Cabang; selebihnya hanya Owner.
+// Bagian 7: daftar boleh dilihat Owner dan Admin Gudang; selebihnya hanya Owner.
 branchesRouter.get(
   "/",
-  requireRole("OWNER", "ADMIN_CABANG"),
+  requireRole("OWNER", "ADMIN_GUDANG"),
   validate(listBranchesQuerySchema, "query"),
   controller.list,
 );

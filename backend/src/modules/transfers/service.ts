@@ -114,7 +114,7 @@ function toDetailDto(row: DetailRow, warehouseStock?: Map<number, number>) {
       qtyReceived: i.qtyReceived,
       // Selisih kirim: dikirim - diterima (tidak menjadi movement; bagian 4.5).
       shortfall: i.qtySent !== null && i.qtyReceived !== null ? i.qtySent - i.qtyReceived : null,
-      // Hanya untuk Owner/Admin Cabang saat transfer belum dikirim.
+      // Hanya untuk Owner/Admin Gudang saat transfer belum dikirim.
       warehouseStock: warehouseStock ? (warehouseStock.get(i.product.id) ?? 0) : undefined,
     })),
   };
@@ -286,7 +286,7 @@ export async function getTransfer(id: number, user: AuthUser) {
     throw notFound("Transfer tidak ditemukan.");
   }
 
-  // Owner/Admin Cabang melihat stok gudang saat memutuskan setujui/kirim.
+  // Owner/Admin Gudang melihat stok gudang saat memutuskan setujui/kirim.
   let warehouseStock: Map<number, number> | undefined;
   if (isAdmin(user) && (row.status === "DIAJUKAN" || row.status === "DISETUJUI")) {
     const stocks = await prisma.branchStock.findMany({
@@ -338,7 +338,7 @@ export async function createRequest(input: CreateRequestInput, user: AuthUser) {
   return getTransfer(id, user);
 }
 
-/** Pengiriman langsung Owner/Admin Cabang: dibuat langsung DIKIRIM, stok gudang berkurang seketika. */
+/** Pengiriman langsung Owner/Admin Gudang: dibuat langsung DIKIRIM, stok gudang berkurang seketika. */
 export async function createDirect(input: CreateDirectInput, user: AuthUser) {
   const id = await prisma.$transaction(async (tx) => {
     const dest = await tx.branch.findUnique({
@@ -393,7 +393,7 @@ export async function cancelTransfer(id: number, user: AuthUser) {
   return getTransfer(id, user);
 }
 
-/** Owner/Admin Cabang menolak request; alasan wajib. Stok tidak berubah. */
+/** Owner/Admin Gudang menolak request; alasan wajib. Stok tidak berubah. */
 export async function rejectTransfer(id: number, input: RejectInput, user: AuthUser) {
   await prisma.$transaction(async (tx) => {
     const row = await lockTransfer(tx, id, user);
@@ -411,7 +411,7 @@ export async function rejectTransfer(id: number, input: RejectInput, user: AuthU
   return getTransfer(id, user);
 }
 
-/** Owner/Admin Cabang menyetujui dan boleh menyesuaikan qty yang akan dikirim. Stok belum berubah. */
+/** Owner/Admin Gudang menyetujui dan boleh menyesuaikan qty yang akan dikirim. Stok belum berubah. */
 export async function approveTransfer(id: number, input: ApproveInput, user: AuthUser) {
   await prisma.$transaction(async (tx) => {
     const row = await lockTransfer(tx, id, user);
@@ -434,7 +434,7 @@ export async function approveTransfer(id: number, input: ApproveInput, user: Aut
   return getTransfer(id, user);
 }
 
-/** Owner/Admin Cabang mengirim transfer DISETUJUI: stok gudang berkurang dalam transaksi yang sama. */
+/** Owner/Admin Gudang mengirim transfer DISETUJUI: stok gudang berkurang dalam transaksi yang sama. */
 export async function sendTransfer(id: number, input: SendInput, user: AuthUser) {
   await prisma.$transaction(async (tx) => {
     const row = await lockTransfer(tx, id, user);

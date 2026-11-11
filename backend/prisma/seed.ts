@@ -56,15 +56,15 @@ async function main() {
   const users = [
     { name: "Owner", email: "owner@softeng.local", role: "OWNER", branchId: null },
     {
-      name: "Admin Cabang 1",
-      email: "admincabang1@softeng.local",
-      role: "ADMIN_CABANG",
+      name: "Admin Gudang 1",
+      email: "admingudang1@softeng.local",
+      role: "ADMIN_GUDANG",
       branchId: null,
     },
     {
-      name: "Admin Cabang 2",
-      email: "admincabang2@softeng.local",
-      role: "ADMIN_CABANG",
+      name: "Admin Gudang 2",
+      email: "admingudang2@softeng.local",
+      role: "ADMIN_GUDANG",
       branchId: null,
     },
     {

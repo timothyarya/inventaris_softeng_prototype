@@ -73,7 +73,7 @@ export const stockColumns: Column<StockRow>[] = [
 ];
 
 /**
- * Daftar stok satu cabang. Owner/Admin Cabang memilih cabang (default gudang utama);
+ * Daftar stok satu cabang. Owner/Admin Gudang memilih cabang (default gudang utama);
  * Pegawai Cabang selalu melihat cabangnya sendiri (backend memaksa, bagian 3.3).
  */
 export function StockList({ mode }: { mode: "admin" | "pegawai" }) {

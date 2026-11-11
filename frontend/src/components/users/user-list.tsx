@@ -67,7 +67,7 @@ export function UserList() {
     <div className="space-y-4">
       <PageHeader
         title="User"
-        description="Kelola akun Owner, Admin Cabang, dan Pegawai Cabang."
+        description="Kelola akun Owner, Admin Gudang, dan Pegawai Cabang."
         actions={
           <Button render={<Link href="/users/baru" />} nativeButton={false}>
             <Plus />
@@ -101,7 +101,7 @@ export function UserList() {
         >
           <NativeSelectOption value="">Semua role</NativeSelectOption>
           <NativeSelectOption value="OWNER">{ROLE_LABEL.OWNER}</NativeSelectOption>
-          <NativeSelectOption value="ADMIN_CABANG">{ROLE_LABEL.ADMIN_CABANG}</NativeSelectOption>
+          <NativeSelectOption value="ADMIN_GUDANG">{ROLE_LABEL.ADMIN_GUDANG}</NativeSelectOption>
           <NativeSelectOption value="PEGAWAI_CABANG">
             {ROLE_LABEL.PEGAWAI_CABANG}
           </NativeSelectOption>

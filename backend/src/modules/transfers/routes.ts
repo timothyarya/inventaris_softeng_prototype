@@ -35,7 +35,7 @@ transfersRouter.post(
 );
 transfersRouter.post(
   "/direct",
-  requireRole("OWNER", "ADMIN_CABANG"),
+  requireRole("OWNER", "ADMIN_GUDANG"),
   validate(createDirectSchema),
   controller.createDirect,
 );
@@ -43,7 +43,7 @@ transfersRouter.post(
 transfersRouter.post("/:id/cancel", requireRole("PEGAWAI_CABANG"), idParam, controller.cancel);
 transfersRouter.post(
   "/:id/approve",
-  requireRole("OWNER", "ADMIN_CABANG"),
+  requireRole("OWNER", "ADMIN_GUDANG"),
   idParam,
   emptyBodyAsObject,
   validate(approveSchema),
@@ -51,14 +51,14 @@ transfersRouter.post(
 );
 transfersRouter.post(
   "/:id/reject",
-  requireRole("OWNER", "ADMIN_CABANG"),
+  requireRole("OWNER", "ADMIN_GUDANG"),
   idParam,
   validate(rejectSchema),
   controller.reject,
 );
 transfersRouter.post(
   "/:id/send",
-  requireRole("OWNER", "ADMIN_CABANG"),
+  requireRole("OWNER", "ADMIN_GUDANG"),
   idParam,
   emptyBodyAsObject,
   validate(sendSchema),

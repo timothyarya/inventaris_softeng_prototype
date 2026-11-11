@@ -13,14 +13,14 @@ const email = z
   .toLowerCase()
   .max(150, "Email maksimal 150 karakter")
   .pipe(z.email({ error: "Format email tidak valid" }));
-const role = z.enum(["OWNER", "ADMIN_CABANG", "PEGAWAI_CABANG"], { error: "Role tidak valid" });
+const role = z.enum(["OWNER", "ADMIN_GUDANG", "PEGAWAI_CABANG"], { error: "Role tidak valid" });
 const branchId = z
   .number({ error: "Cabang tidak valid" })
   .int("Cabang tidak valid")
   .positive("Cabang tidak valid")
   .nullable();
 
-const NO_BRANCH_MESSAGE = "Owner/Admin Cabang tidak boleh terikat ke cabang";
+const NO_BRANCH_MESSAGE = "Owner/Admin Gudang tidak boleh terikat ke cabang";
 
 export const createUserSchema = z
   .object({

@@ -32,7 +32,7 @@ const TABS: { value: TransferStatus | ""; label: string }[] = [
   ...STATUS_ORDER.map((s) => ({ value: s, label: TRANSFER_STATUS_LABEL[s] })),
 ];
 
-/** Halaman /transfer (Owner, Admin Cabang): semua pengajuan, dengan tab per status. */
+/** Halaman /transfer (Owner, Admin Gudang): semua pengajuan, dengan tab per status. */
 export function TransferList() {
   const [status, setStatus] = useState<TransferStatus | "">("");
   const [search, setSearch] = useState("");

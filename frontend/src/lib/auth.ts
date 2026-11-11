@@ -1,4 +1,4 @@
-export type Role = "OWNER" | "ADMIN_CABANG" | "PEGAWAI_CABANG";
+export type Role = "OWNER" | "ADMIN_GUDANG" | "PEGAWAI_CABANG";
 
 export type AuthUser = {
   id: number;
@@ -11,7 +11,7 @@ export type AuthUser = {
 
 export const ROLE_LABEL: Record<Role, string> = {
   OWNER: "Owner",
-  ADMIN_CABANG: "Admin Cabang",
+  ADMIN_GUDANG: "Admin Gudang",
   PEGAWAI_CABANG: "Pegawai Cabang",
 };
 
