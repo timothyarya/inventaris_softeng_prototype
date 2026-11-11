@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+
+# env (hanya .env.example yang di-commit)
+.env
+.env.*
+!.env.example
+
+# build output
+.next/
+dist/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Prisma 7: hasil generate
+backend/src/generated/
+
+# logs & coverage
+*.log
+npm-debug.log*
+coverage/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Claude Code (pengaturan lokal)
+.claude/settings.local.json

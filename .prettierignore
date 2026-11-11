@@ -1,0 +1,11 @@
+node_modules
+.next
+dist
+coverage
+package-lock.json
+backend/src/generated
+backend/prisma/migrations
+frontend/next-env.d.ts
+INSTRUCTION.md
+CLAUDE.md
+.claude

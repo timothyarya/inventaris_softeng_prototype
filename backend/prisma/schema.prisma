@@ -1,0 +1,277 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // URL koneksi ada di prisma.config.ts (aturan Prisma 7)
+}
+
+enum Role {
+  OWNER
+  SUPERADMIN
+  PEGAWAI
+}
+
+enum TransferStatus {
+  DIAJUKAN
+  DISETUJUI
+  DITOLAK
+  DIBATALKAN
+  DIKIRIM
+  DITERIMA
+}
+
+enum OpnameStatus {
+  MENUNGGU
+  DISETUJUI
+  DITOLAK
+}
+
+enum MovementType {
+  MASUK
+  TRANSFER_OUT
+  TRANSFER_IN
+  OPNAME
+}
+
+enum RefType {
+  STOCK_IN
+  TRANSFER
+  OPNAME
+}
+
+model Branch {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique @db.VarChar(20)
+  name      String   @db.VarChar(100)
+  address   String?  @db.VarChar(255)
+  phone     String?  @db.VarChar(30)
+  isMain    Boolean  @default(false) @map("is_main")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  users         User[]
+  stocks        BranchStock[]
+  transfersFrom StockTransfer[] @relation("TransferFrom")
+  transfersTo   StockTransfer[] @relation("TransferTo")
+  opnames       StockOpname[]
+  movements     StockMovement[]
+
+  @@map("branches")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(150)
+  password  String   @db.VarChar(255)
+  role      Role
+  branchId  Int?     @map("branch_id")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  branch Branch? @relation(fields: [branchId], references: [id])
+
+  stockInsCreated    StockIn[]       @relation("StockInCreatedBy")
+  transfersRequested StockTransfer[] @relation("TransferRequestedBy")
+  transfersApproved  StockTransfer[] @relation("TransferApprovedBy")
+  transfersSent      StockTransfer[] @relation("TransferSentBy")
+  transfersReceived  StockTransfer[] @relation("TransferReceivedBy")
+  opnamesCreated     StockOpname[]   @relation("OpnameCreatedBy")
+  opnamesVerified    StockOpname[]   @relation("OpnameVerifiedBy")
+  movements          StockMovement[]
+
+  @@map("users")
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique @db.VarChar(100)
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id         Int      @id @default(autoincrement())
+  sku        String   @unique @db.VarChar(50)
+  name       String   @db.VarChar(150)
+  categoryId Int?     @map("category_id")
+  unit       String   @db.VarChar(20)
+  minStock   Int      @default(0) @map("min_stock")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  category      Category?           @relation(fields: [categoryId], references: [id])
+  stocks        BranchStock[]
+  stockInItems  StockInItem[]
+  transferItems StockTransferItem[]
+  opnameItems   StockOpnameItem[]
+  movements     StockMovement[]
+
+  @@map("products")
+}
+
+model BranchStock {
+  id        Int      @id @default(autoincrement())
+  branchId  Int      @map("branch_id")
+  productId Int      @map("product_id")
+  qty       Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  branch  Branch  @relation(fields: [branchId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([branchId, productId])
+  @@map("branch_stocks")
+}
+
+model StockIn {
+  id           Int      @id @default(autoincrement())
+  docNo        String   @unique @map("doc_no") @db.VarChar(30)
+  date         DateTime @db.Date
+  supplierName String   @map("supplier_name") @db.VarChar(150)
+  invoiceNo    String?  @map("invoice_no") @db.VarChar(50)
+  note         String?  @db.Text
+  createdById  Int      @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  createdBy User          @relation("StockInCreatedBy", fields: [createdById], references: [id])
+  items     StockInItem[]
+
+  @@map("stock_ins")
+}
+
+model StockInItem {
+  id        Int @id @default(autoincrement())
+  stockInId Int @map("stock_in_id")
+  productId Int @map("product_id")
+  qty       Int
+
+  stockIn StockIn @relation(fields: [stockInId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("stock_in_items")
+}
+
+model StockTransfer {
+  id            Int            @id @default(autoincrement())
+  docNo         String         @unique @map("doc_no") @db.VarChar(30)
+  fromBranchId  Int            @map("from_branch_id")
+  toBranchId    Int            @map("to_branch_id")
+  status        TransferStatus
+  note          String?        @db.Text
+  rejectReason  String?        @map("reject_reason") @db.Text
+  cancelReason  String?        @map("cancel_reason") @db.Text
+  requestedById Int?           @map("requested_by")
+  approvedById  Int?           @map("approved_by")
+  sentById      Int?           @map("sent_by")
+  receivedById  Int?           @map("received_by")
+  requestedAt   DateTime?      @map("requested_at") @db.Timestamptz(3)
+  approvedAt    DateTime?      @map("approved_at") @db.Timestamptz(3)
+  sentAt        DateTime?      @map("sent_at") @db.Timestamptz(3)
+  receivedAt    DateTime?      @map("received_at") @db.Timestamptz(3)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  fromBranch  Branch              @relation("TransferFrom", fields: [fromBranchId], references: [id])
+  toBranch    Branch              @relation("TransferTo", fields: [toBranchId], references: [id])
+  requestedBy User?               @relation("TransferRequestedBy", fields: [requestedById], references: [id])
+  approvedBy  User?               @relation("TransferApprovedBy", fields: [approvedById], references: [id])
+  sentBy      User?               @relation("TransferSentBy", fields: [sentById], references: [id])
+  receivedBy  User?               @relation("TransferReceivedBy", fields: [receivedById], references: [id])
+  items       StockTransferItem[]
+
+  @@index([status])
+  @@index([toBranchId, status])
+  @@map("stock_transfers")
+}
+
+model StockTransferItem {
+  id           Int  @id @default(autoincrement())
+  transferId   Int  @map("transfer_id")
+  productId    Int  @map("product_id")
+  qtyRequested Int? @map("qty_requested")
+  qtyApproved  Int? @map("qty_approved")
+  qtySent      Int? @map("qty_sent")
+  qtyReceived  Int? @map("qty_received")
+
+  transfer StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  product  Product       @relation(fields: [productId], references: [id])
+
+  @@map("stock_transfer_items")
+}
+
+model StockOpname {
+  id           Int          @id @default(autoincrement())
+  docNo        String       @unique @map("doc_no") @db.VarChar(30)
+  branchId     Int          @map("branch_id")
+  date         DateTime     @db.Date
+  status       OpnameStatus @default(MENUNGGU)
+  note         String?      @db.Text
+  verifyNote   String?      @map("verify_note") @db.Text
+  createdById  Int          @map("created_by")
+  verifiedById Int?         @map("verified_by")
+  verifiedAt   DateTime?    @map("verified_at") @db.Timestamptz(3)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  branch     Branch            @relation(fields: [branchId], references: [id])
+  createdBy  User              @relation("OpnameCreatedBy", fields: [createdById], references: [id])
+  verifiedBy User?             @relation("OpnameVerifiedBy", fields: [verifiedById], references: [id])
+  items      StockOpnameItem[]
+
+  @@index([branchId, status])
+  @@map("stock_opnames")
+}
+
+model StockOpnameItem {
+  id          Int     @id @default(autoincrement())
+  opnameId    Int     @map("opname_id")
+  productId   Int     @map("product_id")
+  qtySystem   Int     @map("qty_system")
+  qtyPhysical Int     @map("qty_physical")
+  difference  Int
+  remark      String? @db.VarChar(255)
+
+  opname  StockOpname @relation(fields: [opnameId], references: [id], onDelete: Cascade)
+  product Product     @relation(fields: [productId], references: [id])
+
+  @@map("stock_opname_items")
+}
+
+model StockMovement {
+  id         Int          @id @default(autoincrement())
+  branchId   Int          @map("branch_id")
+  productId  Int          @map("product_id")
+  type       MovementType
+  qty        Int
+  balanceAfter Int        @map("balance_after")
+  refType    RefType      @map("ref_type")
+  refId      Int          @map("ref_id")
+  refDocNo   String       @map("ref_doc_no") @db.VarChar(30)
+  userId     Int          @map("user_id")
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  branch  Branch  @relation(fields: [branchId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([branchId, productId, createdAt])
+  @@index([branchId, createdAt])
+  @@index([type, createdAt])
+  @@map("stock_movements")
+}
+
+model DocCounter {
+  prefix  String @db.VarChar(5)
+  date    String @db.VarChar(8)
+  lastSeq Int    @default(0) @map("last_seq")
+
+  @@id([prefix, date])
+  @@map("doc_counters")
+}
