@@ -111,7 +111,7 @@ function BranchDetailView({ branch }: { branch: BranchDetailData }) {
     try {
       const { effects } = await deactivate.mutateAsync();
       toast.success(
-        `Cabang dinonaktifkan. ${formatNumber(effects.usersReleased)} pegawai dilepas, ` +
+        `Cabang dinonaktifkan. ${formatNumber(effects.usersReleased)} pegawai cabang dilepas, ` +
           `${formatNumber(effects.transfersCancelled)} transfer dibatalkan, ` +
           `${formatNumber(effects.opnamesRejected)} opname ditolak.`,
       );
@@ -125,7 +125,7 @@ function BranchDetailView({ branch }: { branch: BranchDetailData }) {
   const onActivate = async () => {
     try {
       await activate.mutateAsync();
-      toast.success("Cabang diaktifkan kembali. Pegawai perlu ditugaskan ulang.");
+      toast.success("Cabang diaktifkan kembali. Pegawai Cabang perlu ditugaskan ulang.");
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -228,7 +228,7 @@ function BranchDetailView({ branch }: { branch: BranchDetailData }) {
           <Card>
             <CardHeader>
               <CardTitle>
-                Pegawai ({formatNumber(branch.users.length)}
+                Pegawai Cabang ({formatNumber(branch.users.length)}
                 {branch.users.length > 0 && `, ${formatNumber(activeStaff)} aktif`})
               </CardTitle>
             </CardHeader>
@@ -236,8 +236,8 @@ function BranchDetailView({ branch }: { branch: BranchDetailData }) {
               {branch.users.length === 0 ? (
                 <p className="text-muted-foreground text-sm">
                   {branch.isMain
-                    ? "Gudang utama tidak memiliki pegawai."
-                    : "Belum ada pegawai yang ditugaskan ke cabang ini."}
+                    ? "Gudang utama tidak memiliki pegawai cabang."
+                    : "Belum ada pegawai cabang yang ditugaskan ke cabang ini."}
                 </p>
               ) : (
                 <ul className="divide-y text-sm">
@@ -268,7 +268,7 @@ function BranchDetailView({ branch }: { branch: BranchDetailData }) {
             <p>Dampak penonaktifan cabang ini:</p>
             <ul className="list-disc space-y-1 pl-5">
               <li>
-                {formatNumber(branch.users.length)} pegawai dilepas dari cabang dan menunggu
+                {formatNumber(branch.users.length)} pegawai cabang dilepas dari cabang dan menunggu
                 penugasan ulang.
               </li>
               <li>Transfer berstatus DIAJUKAN yang melibatkan cabang ini dibatalkan.</li>
@@ -289,7 +289,7 @@ function BranchDetailView({ branch }: { branch: BranchDetailData }) {
         open={confirm === "activate"}
         onOpenChange={(open) => !open && setConfirm(null)}
         title={`Aktifkan ${formatBranch(branch)}?`}
-        description="Pegawai yang sebelumnya dilepas tidak dikembalikan otomatis; tugaskan ulang dari menu User."
+        description="Pegawai Cabang yang sebelumnya dilepas tidak dikembalikan otomatis; tugaskan ulang dari menu User."
         confirmLabel="Aktifkan"
         pending={activate.isPending}
         onConfirm={onActivate}

@@ -127,7 +127,7 @@ export const listTransfersQuerySchema = z
           : undefined,
       )
       .pipe(z.array(z.enum(TRANSFER_STATUSES, { error: "Status tidak valid" })).optional()),
-    // Cabang tujuan. Diabaikan untuk Pegawai (selalu cabangnya sendiri).
+    // Cabang tujuan. Diabaikan untuk Pegawai Cabang (selalu cabangnya sendiri).
     branchId: positiveId("Cabang").optional(),
     origin: z.enum(["request", "direct"], { error: "origin harus request atau direct" }).optional(),
     from: dateString("Tanggal mulai").optional(),

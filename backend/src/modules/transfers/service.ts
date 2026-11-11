@@ -114,13 +114,13 @@ function toDetailDto(row: DetailRow, warehouseStock?: Map<number, number>) {
       qtyReceived: i.qtyReceived,
       // Selisih kirim: dikirim - diterima (tidak menjadi movement; bagian 4.5).
       shortfall: i.qtySent !== null && i.qtyReceived !== null ? i.qtySent - i.qtyReceived : null,
-      // Hanya untuk Owner/SA saat transfer belum dikirim.
+      // Hanya untuk Owner/Admin Cabang saat transfer belum dikirim.
       warehouseStock: warehouseStock ? (warehouseStock.get(i.product.id) ?? 0) : undefined,
     })),
   };
 }
 
-const isAdmin = (user: AuthUser) => user.role !== "PEGAWAI";
+const isAdmin = (user: AuthUser) => user.role !== "PEGAWAI_CABANG";
 
 async function getMainBranch(tx: Tx) {
   const main = await tx.branch.findFirst({
@@ -155,8 +155,8 @@ async function assertProductsUsable(tx: Tx, productIds: number[]) {
 async function lockTransfer(tx: Tx, id: number, user: AuthUser) {
   await tx.$queryRaw`SELECT id FROM stock_transfers WHERE id = ${id} FOR UPDATE`;
   const row = await tx.stockTransfer.findUnique({ where: { id }, include: detailInclude });
-  // Pegawai hanya boleh menyentuh transfer menuju cabangnya; selainnya dianggap tidak ada.
-  if (!row || (user.role === "PEGAWAI" && row.toBranchId !== user.branchId)) {
+  // Pegawai Cabang hanya boleh menyentuh transfer menuju cabangnya; selainnya dianggap tidak ada.
+  if (!row || (user.role === "PEGAWAI_CABANG" && row.toBranchId !== user.branchId)) {
     throw notFound("Transfer tidak ditemukan.");
   }
   return row;
@@ -241,7 +241,7 @@ async function dispatchFromWarehouse(
 }
 
 export async function listTransfers(query: ListTransfersQuery, user: AuthUser) {
-  // Pegawai: cabang tujuan selalu cabangnya sendiri (bagian 3.3). Admin: filter opsional.
+  // Pegawai Cabang: cabang tujuan selalu cabangnya sendiri (bagian 3.3). Admin: filter opsional.
   const toBranchId = resolveBranchId(user, query.branchId);
 
   const where: Prisma.StockTransferWhereInput = {
@@ -282,11 +282,11 @@ export async function listTransfers(query: ListTransfersQuery, user: AuthUser) {
 
 export async function getTransfer(id: number, user: AuthUser) {
   const row = await prisma.stockTransfer.findUnique({ where: { id }, include: detailInclude });
-  if (!row || (user.role === "PEGAWAI" && row.toBranchId !== user.branchId)) {
+  if (!row || (user.role === "PEGAWAI_CABANG" && row.toBranchId !== user.branchId)) {
     throw notFound("Transfer tidak ditemukan.");
   }
 
-  // Owner/SA melihat stok gudang saat memutuskan setujui/kirim.
+  // Owner/Admin Cabang melihat stok gudang saat memutuskan setujui/kirim.
   let warehouseStock: Map<number, number> | undefined;
   if (isAdmin(user) && (row.status === "DIAJUKAN" || row.status === "DISETUJUI")) {
     const stocks = await prisma.branchStock.findMany({
@@ -338,7 +338,7 @@ export async function createRequest(input: CreateRequestInput, user: AuthUser) {
   return getTransfer(id, user);
 }
 
-/** Pengiriman langsung Owner/SA: dibuat langsung DIKIRIM, stok gudang berkurang seketika. */
+/** Pengiriman langsung Owner/Admin Cabang: dibuat langsung DIKIRIM, stok gudang berkurang seketika. */
 export async function createDirect(input: CreateDirectInput, user: AuthUser) {
   const id = await prisma.$transaction(async (tx) => {
     const dest = await tx.branch.findUnique({
@@ -383,7 +383,7 @@ export async function createDirect(input: CreateDirectInput, user: AuthUser) {
   return getTransfer(id, user);
 }
 
-/** Pegawai membatalkan request milik cabangnya yang masih DIAJUKAN. */
+/** Pegawai Cabang membatalkan request milik cabangnya yang masih DIAJUKAN. */
 export async function cancelTransfer(id: number, user: AuthUser) {
   await prisma.$transaction(async (tx) => {
     const row = await lockTransfer(tx, id, user);
@@ -393,7 +393,7 @@ export async function cancelTransfer(id: number, user: AuthUser) {
   return getTransfer(id, user);
 }
 
-/** Owner/SA menolak request; alasan wajib. Stok tidak berubah. */
+/** Owner/Admin Cabang menolak request; alasan wajib. Stok tidak berubah. */
 export async function rejectTransfer(id: number, input: RejectInput, user: AuthUser) {
   await prisma.$transaction(async (tx) => {
     const row = await lockTransfer(tx, id, user);
@@ -411,7 +411,7 @@ export async function rejectTransfer(id: number, input: RejectInput, user: AuthU
   return getTransfer(id, user);
 }
 
-/** Owner/SA menyetujui dan boleh menyesuaikan qty yang akan dikirim. Stok belum berubah. */
+/** Owner/Admin Cabang menyetujui dan boleh menyesuaikan qty yang akan dikirim. Stok belum berubah. */
 export async function approveTransfer(id: number, input: ApproveInput, user: AuthUser) {
   await prisma.$transaction(async (tx) => {
     const row = await lockTransfer(tx, id, user);
@@ -434,7 +434,7 @@ export async function approveTransfer(id: number, input: ApproveInput, user: Aut
   return getTransfer(id, user);
 }
 
-/** Owner/SA mengirim transfer DISETUJUI: stok gudang berkurang dalam transaksi yang sama. */
+/** Owner/Admin Cabang mengirim transfer DISETUJUI: stok gudang berkurang dalam transaksi yang sama. */
 export async function sendTransfer(id: number, input: SendInput, user: AuthUser) {
   await prisma.$transaction(async (tx) => {
     const row = await lockTransfer(tx, id, user);
@@ -461,7 +461,7 @@ export async function sendTransfer(id: number, input: SendInput, user: AuthUser)
   return getTransfer(id, user);
 }
 
-/** Pegawai cabang tujuan menerima kiriman: stok cabang bertambah sebesar qty diterima. */
+/** Pegawai Cabang tujuan menerima kiriman: stok cabang bertambah sebesar qty diterima. */
 export async function receiveTransfer(id: number, input: ReceiveInput, user: AuthUser) {
   await prisma.$transaction(async (tx) => {
     const row = await lockTransfer(tx, id, user);

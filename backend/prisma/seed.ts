@@ -55,9 +55,30 @@ async function main() {
   // User
   const users = [
     { name: "Owner", email: "owner@softeng.local", role: "OWNER", branchId: null },
-    { name: "Super Admin", email: "superadmin@softeng.local", role: "SUPERADMIN", branchId: null },
-    { name: "Pegawai CB01", email: "pegawai1@softeng.local", role: "PEGAWAI", branchId: cb01.id },
-    { name: "Pegawai CB02", email: "pegawai2@softeng.local", role: "PEGAWAI", branchId: cb02.id },
+    {
+      name: "Admin Cabang 1",
+      email: "admincabang1@softeng.local",
+      role: "ADMIN_CABANG",
+      branchId: null,
+    },
+    {
+      name: "Admin Cabang 2",
+      email: "admincabang2@softeng.local",
+      role: "ADMIN_CABANG",
+      branchId: null,
+    },
+    {
+      name: "Pegawai Cabang CB01",
+      email: "pegawaicabang1@softeng.local",
+      role: "PEGAWAI_CABANG",
+      branchId: cb01.id,
+    },
+    {
+      name: "Pegawai Cabang CB02",
+      email: "pegawaicabang2@softeng.local",
+      role: "PEGAWAI_CABANG",
+      branchId: cb02.id,
+    },
   ] as const;
   for (const u of users) {
     await prisma.user.upsert({

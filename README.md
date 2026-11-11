@@ -52,12 +52,13 @@ npm run db:seed
 
 Akun seed (password dari `SEED_DEFAULT_PASSWORD`, default `password123`):
 
-| Role       | Email                      | Cabang |
-| ---------- | -------------------------- | ------ |
-| Owner      | `owner@softeng.local`      | —      |
-| SuperAdmin | `superadmin@softeng.local` | —      |
-| Pegawai    | `pegawai1@softeng.local`   | CB01   |
-| Pegawai    | `pegawai2@softeng.local`   | CB02   |
+| Role           | Email                          | Cabang |
+| -------------- | ------------------------------ | ------ |
+| Owner          | `owner@softeng.local`          | —      |
+| Admin Cabang   | `admincabang1@softeng.local`   | —      |
+| Admin Cabang   | `admincabang2@softeng.local`   | —      |
+| Pegawai Cabang | `pegawaicabang1@softeng.local` | CB01   |
+| Pegawai Cabang | `pegawaicabang2@softeng.local` | CB02   |
 
 ## Menjalankan
 
@@ -84,4 +85,4 @@ npm run format:check
 - Login memakai cookie JWT `httpOnly` (nama `token`). Frontend memanggil `/api/*` yang di-proxy Next.js ke Express, jadi cookie bersifat same-origin.
 - `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`.
 - Middleware `authenticate` memuat ulang user dari database di setiap request, sehingga akun yang dinonaktifkan langsung mendapat 401.
-- Pegawai tanpa cabang hanya bisa memakai `/api/auth/*` (endpoint lain 403) dan di frontend diarahkan ke `/menunggu-penugasan`.
+- Pegawai Cabang tanpa cabang hanya bisa memakai `/api/auth/*` (endpoint lain 403) dan di frontend diarahkan ke `/menunggu-penugasan`.

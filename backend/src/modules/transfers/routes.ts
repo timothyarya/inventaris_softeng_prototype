@@ -23,27 +23,27 @@ const emptyBodyAsObject: RequestHandler = (req, _res, next) => {
 
 const idParam = validate(idParamSchema, "params");
 
-// Bagian 7. Pegawai dibatasi ke cabang tujuannya di service (selain itu 404).
+// Bagian 7. Pegawai Cabang dibatasi ke cabang tujuannya di service (selain itu 404).
 transfersRouter.get("/", validate(listTransfersQuerySchema, "query"), controller.list);
 transfersRouter.get("/:id", idParam, controller.get);
 
 transfersRouter.post(
   "/requests",
-  requireRole("PEGAWAI"),
+  requireRole("PEGAWAI_CABANG"),
   validate(createRequestSchema),
   controller.createRequest,
 );
 transfersRouter.post(
   "/direct",
-  requireRole("OWNER", "SUPERADMIN"),
+  requireRole("OWNER", "ADMIN_CABANG"),
   validate(createDirectSchema),
   controller.createDirect,
 );
 
-transfersRouter.post("/:id/cancel", requireRole("PEGAWAI"), idParam, controller.cancel);
+transfersRouter.post("/:id/cancel", requireRole("PEGAWAI_CABANG"), idParam, controller.cancel);
 transfersRouter.post(
   "/:id/approve",
-  requireRole("OWNER", "SUPERADMIN"),
+  requireRole("OWNER", "ADMIN_CABANG"),
   idParam,
   emptyBodyAsObject,
   validate(approveSchema),
@@ -51,14 +51,14 @@ transfersRouter.post(
 );
 transfersRouter.post(
   "/:id/reject",
-  requireRole("OWNER", "SUPERADMIN"),
+  requireRole("OWNER", "ADMIN_CABANG"),
   idParam,
   validate(rejectSchema),
   controller.reject,
 );
 transfersRouter.post(
   "/:id/send",
-  requireRole("OWNER", "SUPERADMIN"),
+  requireRole("OWNER", "ADMIN_CABANG"),
   idParam,
   emptyBodyAsObject,
   validate(sendSchema),
@@ -66,7 +66,7 @@ transfersRouter.post(
 );
 transfersRouter.post(
   "/:id/receive",
-  requireRole("PEGAWAI"),
+  requireRole("PEGAWAI_CABANG"),
   idParam,
   emptyBodyAsObject,
   validate(receiveSchema),

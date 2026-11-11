@@ -5,5 +5,5 @@ import { listStocksQuerySchema } from "./schema";
 
 export const stocksRouter = Router();
 
-// Bagian 7: semua role; Pegawai dipaksa ke cabangnya di service.
+// Bagian 7: semua role; Pegawai Cabang dipaksa ke cabangnya di service.
 stocksRouter.get("/", validate(listStocksQuerySchema, "query"), controller.list);

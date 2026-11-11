@@ -7,8 +7,8 @@ import { createStockInSchema, listStockInsQuerySchema } from "./schema";
 
 export const stockInsRouter = Router();
 
-// Bagian 7: stok masuk hanya untuk Owner dan SuperAdmin. Tidak ada edit/hapus (bagian 4.4).
-stockInsRouter.use(requireRole("OWNER", "SUPERADMIN"));
+// Bagian 7: stok masuk hanya untuk Owner dan Admin Cabang. Tidak ada edit/hapus (bagian 4.4).
+stockInsRouter.use(requireRole("OWNER", "ADMIN_CABANG"));
 
 stockInsRouter.get("/", validate(listStockInsQuerySchema, "query"), controller.list);
 stockInsRouter.get("/:id", validate(idParamSchema, "params"), controller.get);

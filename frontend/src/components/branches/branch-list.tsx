@@ -31,7 +31,7 @@ const columns: Column<Branch>[] = [
   },
   { header: "Alamat", cell: (b) => b.address ?? "—" },
   { header: "Telepon", cell: (b) => b.phone ?? "—" },
-  { header: "Pegawai", className: "text-right", cell: (b) => formatNumber(b.userCount) },
+  { header: "Pegawai Cabang", className: "text-right", cell: (b) => formatNumber(b.userCount) },
   { header: "Status", cell: (b) => <ActiveBadge active={b.isActive} /> },
 ];
 

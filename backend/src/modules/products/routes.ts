@@ -7,13 +7,13 @@ import { createProductSchema, listProductsQuerySchema, updateProductSchema } fro
 
 export const productsRouter = Router();
 
-const adminOnly = requireRole("OWNER", "SUPERADMIN");
+const adminOnly = requireRole("OWNER", "ADMIN_CABANG");
 const idParam = validate(idParamSchema, "params");
 
-// Semua role boleh melihat daftar (Pegawai: hanya produk aktif, dipaksa di service).
+// Semua role boleh melihat daftar (Pegawai Cabang: hanya produk aktif, dipaksa di service).
 productsRouter.get("/", validate(listProductsQuerySchema, "query"), controller.list);
 
-// GET /products/:id dipakai halaman edit produk (Owner/SuperAdmin).
+// GET /products/:id dipakai halaman edit produk (Owner/Admin Cabang).
 productsRouter.get("/:id", adminOnly, idParam, controller.get);
 productsRouter.post("/", adminOnly, validate(createProductSchema), controller.create);
 productsRouter.patch("/:id", adminOnly, idParam, validate(updateProductSchema), controller.update);

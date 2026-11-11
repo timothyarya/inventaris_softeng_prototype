@@ -34,7 +34,7 @@ const columns: Column<ManagedUser>[] = [
     header: "Cabang",
     cell: (u) => {
       if (u.branch) return formatBranch(u.branch);
-      if (u.role === "PEGAWAI") return <Badge variant="secondary">Menunggu penugasan</Badge>;
+      if (u.role === "PEGAWAI_CABANG") return <Badge variant="secondary">Menunggu penugasan</Badge>;
       return "—";
     },
   },
@@ -50,13 +50,13 @@ export function UserList() {
   const q = useDebouncedValue(search.trim());
   const branches = useActiveBranches();
 
-  // "Pegawai tanpa cabang" hanya bermakna untuk role Pegawai, jadi role ikut dipaksa.
+  // "Pegawai Cabang tanpa cabang" hanya bermakna untuk role Pegawai Cabang, jadi role ikut dipaksa.
   const awaiting = branch === NONE;
   const query = useUsers({
     page,
     pageSize: 20,
     q: q || undefined,
-    role: awaiting ? "PEGAWAI" : role || undefined,
+    role: awaiting ? "PEGAWAI_CABANG" : role || undefined,
     branchId: awaiting ? NONE : branch ? Number(branch) : undefined,
     status: status || undefined,
   });
@@ -67,7 +67,7 @@ export function UserList() {
     <div className="space-y-4">
       <PageHeader
         title="User"
-        description="Kelola akun Owner, SuperAdmin, dan Pegawai."
+        description="Kelola akun Owner, Admin Cabang, dan Pegawai Cabang."
         actions={
           <Button render={<Link href="/users/baru" />} nativeButton={false}>
             <Plus />
@@ -91,7 +91,7 @@ export function UserList() {
           />
         </div>
         <NativeSelect
-          value={awaiting ? "PEGAWAI" : role}
+          value={awaiting ? "PEGAWAI_CABANG" : role}
           disabled={awaiting}
           onChange={(e) => {
             setRole(e.target.value as "" | Role);
@@ -101,8 +101,10 @@ export function UserList() {
         >
           <NativeSelectOption value="">Semua role</NativeSelectOption>
           <NativeSelectOption value="OWNER">{ROLE_LABEL.OWNER}</NativeSelectOption>
-          <NativeSelectOption value="SUPERADMIN">{ROLE_LABEL.SUPERADMIN}</NativeSelectOption>
-          <NativeSelectOption value="PEGAWAI">{ROLE_LABEL.PEGAWAI}</NativeSelectOption>
+          <NativeSelectOption value="ADMIN_CABANG">{ROLE_LABEL.ADMIN_CABANG}</NativeSelectOption>
+          <NativeSelectOption value="PEGAWAI_CABANG">
+            {ROLE_LABEL.PEGAWAI_CABANG}
+          </NativeSelectOption>
         </NativeSelect>
         <NativeSelect
           value={branch}
@@ -113,7 +115,7 @@ export function UserList() {
           aria-label="Filter cabang"
         >
           <NativeSelectOption value="">Semua cabang</NativeSelectOption>
-          <NativeSelectOption value={NONE}>Pegawai tanpa cabang</NativeSelectOption>
+          <NativeSelectOption value={NONE}>Pegawai Cabang tanpa cabang</NativeSelectOption>
           {branches.data?.data.map((b) => (
             <NativeSelectOption key={b.id} value={String(b.id)}>
               {formatBranch(b)}

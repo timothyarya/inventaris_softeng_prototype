@@ -11,7 +11,7 @@ export type TransferListParams = {
   q?: string;
   /** Daftar status dipisah koma, mis. "DIAJUKAN,DISETUJUI". */
   status?: string;
-  /** Cabang tujuan (diabaikan backend untuk Pegawai). */
+  /** Cabang tujuan (diabaikan backend untuk Pegawai Cabang). */
   branchId?: number;
   origin?: "request" | "direct";
   /** YYYY-MM-DD */

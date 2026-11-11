@@ -17,7 +17,7 @@ const passwordRule = z
   .min(8, "Password minimal 8 karakter")
   .max(72, "Password maksimal 72 karakter");
 
-const roleSchema = z.enum(["OWNER", "SUPERADMIN", "PEGAWAI"]);
+const roleSchema = z.enum(["OWNER", "ADMIN_CABANG", "PEGAWAI_CABANG"]);
 
 // branchId disimpan sebagai string dari <select>; "" berarti belum ditugaskan.
 export const userCreateSchema = z.object({

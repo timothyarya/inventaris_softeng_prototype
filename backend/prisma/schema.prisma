@@ -10,8 +10,8 @@ datasource db {
 
 enum Role {
   OWNER
-  SUPERADMIN
-  PEGAWAI
+  ADMIN_CABANG
+  PEGAWAI_CABANG
 }
 
 enum TransferStatus {

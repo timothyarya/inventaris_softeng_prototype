@@ -14,7 +14,7 @@ import { formatBranch } from "@/lib/format";
 import type { ManagedUser } from "@/lib/types";
 import { userCreateSchema, userEditSchema, type UserFormValues } from "./user-schema";
 
-const ROLES: Role[] = ["OWNER", "SUPERADMIN", "PEGAWAI"];
+const ROLES: Role[] = ["OWNER", "ADMIN_CABANG", "PEGAWAI_CABANG"];
 
 export function UserForm({
   mode,
@@ -39,7 +39,7 @@ export function UserForm({
       name: user?.name ?? "",
       email: user?.email ?? "",
       password: "",
-      role: user?.role ?? "PEGAWAI",
+      role: user?.role ?? "PEGAWAI_CABANG",
       branchId: user?.branchId ? String(user.branchId) : "",
     },
   });
@@ -90,9 +90,9 @@ export function UserForm({
         htmlFor="role"
         error={errors.role?.message}
         hint={
-          role === "PEGAWAI"
+          role === "PEGAWAI_CABANG"
             ? undefined
-            : "Owner dan SuperAdmin tidak terikat cabang; penugasan cabang akan dikosongkan."
+            : "Owner dan Admin Cabang tidak terikat cabang; penugasan cabang akan dikosongkan."
         }
       >
         <NativeSelect id="role" {...register("role")}>
@@ -103,12 +103,12 @@ export function UserForm({
           ))}
         </NativeSelect>
       </FormField>
-      {role === "PEGAWAI" && (
+      {role === "PEGAWAI_CABANG" && (
         <FormField
           label="Cabang"
           htmlFor="branchId"
           error={errors.branchId?.message}
-          hint="Pegawai yang belum ditugaskan hanya melihat halaman menunggu penugasan."
+          hint="Pegawai Cabang yang belum ditugaskan hanya melihat halaman menunggu penugasan."
         >
           <NativeSelect id="branchId" disabled={branches.isPending} {...register("branchId")}>
             <NativeSelectOption value="">Belum ditugaskan</NativeSelectOption>

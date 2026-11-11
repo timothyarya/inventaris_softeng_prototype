@@ -15,7 +15,7 @@ export function AppHeader({ user }: { user: AuthUser }) {
           <div className="text-sm font-medium">{user.name}</div>
           <div className="text-muted-foreground text-xs">
             {ROLE_LABEL[user.role]}
-            {user.role === "PEGAWAI" && user.branch ? ` · ${user.branch.name}` : ""}
+            {user.role === "PEGAWAI_CABANG" && user.branch ? ` · ${user.branch.name}` : ""}
           </div>
         </div>
         <LogoutButton compact />

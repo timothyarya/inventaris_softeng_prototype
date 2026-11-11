@@ -74,8 +74,8 @@ const MENUS: Record<Role, MenuItem[]> = {
     { label: "User", icon: Users, href: "/users" },
     ...ADMIN_MENU_AFTER_MASTER,
   ],
-  SUPERADMIN: [...ADMIN_MENU_BEFORE_MASTER, ...ADMIN_MENU_AFTER_MASTER],
-  PEGAWAI: [
+  ADMIN_CABANG: [...ADMIN_MENU_BEFORE_MASTER, ...ADMIN_MENU_AFTER_MASTER],
+  PEGAWAI_CABANG: [
     DASHBOARD,
     { label: "Inventaris", icon: Boxes, href: "/inventaris" },
     {
@@ -96,7 +96,7 @@ export function getMenu(role: Role): MenuItem[] {
   return MENUS[role];
 }
 
-const ADMIN: Role[] = ["OWNER", "SUPERADMIN"];
+const ADMIN: Role[] = ["OWNER", "ADMIN_CABANG"];
 
 /** Aturan akses route (bagian 9). Prefiks terpanjang yang cocok yang berlaku. */
 const ROUTE_RULES: { path: string; exact?: boolean; roles: Role[] | "all" }[] = [
@@ -104,7 +104,7 @@ const ROUTE_RULES: { path: string; exact?: boolean; roles: Role[] | "all" }[] = 
   { path: "/403", roles: "all" },
   { path: "/produk", roles: ADMIN },
   { path: "/kategori", roles: ADMIN },
-  { path: "/inventaris", roles: ["PEGAWAI"] },
+  { path: "/inventaris", roles: ["PEGAWAI_CABANG"] },
   { path: "/stok", exact: true, roles: ADMIN },
   { path: "/cabang", roles: ["OWNER"] },
   { path: "/users", roles: ["OWNER"] },
@@ -112,7 +112,7 @@ const ROUTE_RULES: { path: string; exact?: boolean; roles: Role[] | "all" }[] = 
   { path: "/transfer", exact: true, roles: ADMIN },
   { path: "/transfer/kirim", roles: ADMIN },
   { path: "/transfer", roles: "all" }, // /transfer/[id]: semua role (dibatasi cabang di backend)
-  { path: "/request-stok", roles: ["PEGAWAI"] },
+  { path: "/request-stok", roles: ["PEGAWAI_CABANG"] },
   { path: "/opname", roles: "all" },
   { path: "/riwayat", roles: "all" },
   { path: "/laporan", roles: ADMIN },

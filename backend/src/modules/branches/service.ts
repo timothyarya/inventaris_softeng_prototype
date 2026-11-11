@@ -180,7 +180,7 @@ export async function activateBranch(id: number) {
     if (!branch) throw notFound("Cabang tidak ditemukan.");
     if (branch.isActive) throw conflict("Cabang sudah aktif.", "BRANCH_STATE_UNCHANGED");
 
-    // Pegawai tidak otomatis kembali ke cabang ini (bagian 4.1).
+    // Pegawai Cabang tidak otomatis kembali ke cabang ini (bagian 4.1).
     const updated = await tx.branch.update({
       where: { id },
       data: { isActive: true },

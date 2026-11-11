@@ -17,7 +17,7 @@ import { FullPageLoading } from "./full-page-message";
  * Penjaga halaman + kerangka layout (sidebar + header). Hanya untuk UX:
  * backend tetap sumber kebenaran akses.
  * - belum login / sesi berakhir / akun nonaktif (401) -> /login
- * - Pegawai tanpa cabang -> /menunggu-penugasan
+ * - Pegawai Cabang tanpa cabang -> /menunggu-penugasan
  * - route di luar hak role -> halaman 403
  */
 export function AppShell({ children }: { children: React.ReactNode }) {

@@ -8,7 +8,7 @@ import type { Paginated, StockRow } from "@/lib/types";
 export type StockListParams = {
   page: number;
   pageSize: number;
-  /** Diabaikan backend untuk Pegawai (selalu cabangnya sendiri). */
+  /** Diabaikan backend untuk Pegawai Cabang (selalu cabangnya sendiri). */
   branchId?: number;
   productId?: number;
   q?: string;

@@ -45,8 +45,8 @@ async function assertCategoryExists(categoryId: number | null | undefined) {
 }
 
 export async function listProducts(query: ListProductsQuery, user: AuthUser) {
-  // Pegawai hanya melihat produk aktif (bagian 7).
-  const status = user.role === "PEGAWAI" ? "active" : query.status;
+  // Pegawai Cabang hanya melihat produk aktif (bagian 7).
+  const status = user.role === "PEGAWAI_CABANG" ? "active" : query.status;
 
   const where: Prisma.ProductWhereInput = {
     ...(status === "active"

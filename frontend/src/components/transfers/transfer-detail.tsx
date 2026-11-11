@@ -48,7 +48,7 @@ export function TransferDetailView() {
   const query = useTransfer(valid ? id : 0);
   const me = useMe();
   const role = me.data?.role;
-  const listHref = role === "PEGAWAI" ? "/request-stok" : "/transfer";
+  const listHref = role === "PEGAWAI_CABANG" ? "/request-stok" : "/transfer";
 
   if (!valid) return <ErrorState message="Transfer tidak ditemukan." href={listHref} />;
 
@@ -90,8 +90,8 @@ function Content({
   const receive = useReceiveTransfer(t.id);
   const cancel = useCancelTransfer(t.id);
 
-  const isAdmin = role === "OWNER" || role === "SUPERADMIN";
-  const isPegawai = role === "PEGAWAI";
+  const isAdmin = role === "OWNER" || role === "ADMIN_CABANG";
+  const isPegawai = role === "PEGAWAI_CABANG";
   const canApprove = isAdmin && t.status === "DIAJUKAN";
   const canSend = isAdmin && t.status === "DISETUJUI";
   const canReceive = isPegawai && t.status === "DIKIRIM";
@@ -222,7 +222,7 @@ function Content({
               <div className="sm:col-span-2">
                 <Info
                   label="Alasan pembatalan"
-                  value={t.cancelReason ?? "Dibatalkan oleh pegawai"}
+                  value={t.cancelReason ?? "Dibatalkan oleh pegawai cabang"}
                 />
               </div>
             )}
@@ -416,12 +416,12 @@ function Content({
 }
 
 function statusHint(t: TransferDetail, role: Role): string {
-  const admin = role !== "PEGAWAI";
+  const admin = role !== "PEGAWAI_CABANG";
   switch (t.status) {
     case "DIAJUKAN":
       return admin
         ? "Menunggu keputusan Anda: setujui (jumlah dapat disesuaikan) atau tolak dengan alasan."
-        : "Menunggu persetujuan Owner atau SuperAdmin. Request masih dapat dibatalkan.";
+        : "Menunggu persetujuan Owner atau Admin Cabang. Request masih dapat dibatalkan.";
     case "DISETUJUI":
       return admin
         ? "Siap dikirim. Stok gudang dicek dan dikurangi saat Anda menekan Kirim."

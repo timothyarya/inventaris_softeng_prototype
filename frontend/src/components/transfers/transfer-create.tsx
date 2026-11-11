@@ -28,8 +28,8 @@ const emptyItem = { productId: "", qty: undefined as unknown as number };
 
 /**
  * Form dua mode:
- *  - "request": Pegawai meminta stok ke gudang utama untuk cabangnya (tanpa menampilkan stok gudang).
- *  - "direct": Owner/SuperAdmin mengirim langsung dari gudang utama ke cabang aktif (stok gudang ditampilkan).
+ *  - "request": Pegawai Cabang meminta stok ke gudang utama untuk cabangnya (tanpa menampilkan stok gudang).
+ *  - "direct": Owner/Admin Cabang mengirim langsung dari gudang utama ke cabang aktif (stok gudang ditampilkan).
  */
 export function TransferCreate({ mode }: { mode: "request" | "direct" }) {
   const direct = mode === "direct";
@@ -39,7 +39,7 @@ export function TransferCreate({ mode }: { mode: "request" | "direct" }) {
   const createDirect = useCreateDirect();
   const creating = direct ? createDirect.isPending : createRequest.isPending;
   const products = useAllActiveProducts();
-  // GET /branches hanya untuk Owner/SuperAdmin; Pegawai memakai cabangnya sendiri (dari sesi).
+  // GET /branches hanya untuk Owner/Admin Cabang; Pegawai Cabang memakai cabangnya sendiri (dari sesi).
   const activeBranches = useActiveBranches({ enabled: direct });
   const allBranches = useBranches({ page: 1, pageSize: 100 }, { enabled: direct });
   const mainBranch = allBranches.data?.data.find((b) => b.isMain);
@@ -307,7 +307,7 @@ export function TransferCreate({ mode }: { mode: "request" | "direct" }) {
                 dapat dibatalkan.
               </p>
             ) : (
-              <p>Request akan menunggu persetujuan Owner atau SuperAdmin.</p>
+              <p>Request akan menunggu persetujuan Owner atau Admin Cabang.</p>
             )}
           </div>
         }

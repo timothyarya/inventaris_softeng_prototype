@@ -9,7 +9,7 @@ const id = (label: string) =>
 
 export const listStocksQuerySchema = z.object({
   ...paginationQuery,
-  // Pegawai: diabaikan, selalu cabangnya sendiri. Owner/SA: kosong = semua cabang aktif.
+  // Pegawai Cabang: diabaikan, selalu cabangnya sendiri. Owner/Admin Cabang: kosong = semua cabang aktif.
   branchId: id("Cabang").optional(),
   productId: id("Produk").optional(),
   q: z.string().trim().optional(),

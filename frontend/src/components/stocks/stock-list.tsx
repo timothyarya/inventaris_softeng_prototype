@@ -56,8 +56,8 @@ export const stockColumns: Column<StockRow>[] = [
 ];
 
 /**
- * Daftar stok satu cabang. Owner/SuperAdmin memilih cabang (default gudang utama);
- * Pegawai selalu melihat cabangnya sendiri (backend memaksa, bagian 3.3).
+ * Daftar stok satu cabang. Owner/Admin Cabang memilih cabang (default gudang utama);
+ * Pegawai Cabang selalu melihat cabangnya sendiri (backend memaksa, bagian 3.3).
  */
 export function StockList({ mode }: { mode: "admin" | "pegawai" }) {
   const me = useMe();
@@ -70,7 +70,7 @@ export function StockList({ mode }: { mode: "admin" | "pegawai" }) {
 
   const branchList = branches.data?.data ?? [];
   const mainBranch = branchList.find((b) => b.isMain);
-  // Admin: pilihan user, atau gudang utama sebelum dipilih. Pegawai: tidak dikirim.
+  // Admin: pilihan user, atau gudang utama sebelum dipilih. Pegawai Cabang: tidak dikirim.
   const branchId = mode === "admin" ? (selected ? Number(selected) : mainBranch?.id) : undefined;
 
   const query = useStocks(

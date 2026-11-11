@@ -13,14 +13,14 @@ const email = z
   .toLowerCase()
   .max(150, "Email maksimal 150 karakter")
   .pipe(z.email({ error: "Format email tidak valid" }));
-const role = z.enum(["OWNER", "SUPERADMIN", "PEGAWAI"], { error: "Role tidak valid" });
+const role = z.enum(["OWNER", "ADMIN_CABANG", "PEGAWAI_CABANG"], { error: "Role tidak valid" });
 const branchId = z
   .number({ error: "Cabang tidak valid" })
   .int("Cabang tidak valid")
   .positive("Cabang tidak valid")
   .nullable();
 
-const NO_BRANCH_MESSAGE = "Owner/SuperAdmin tidak boleh terikat ke cabang";
+const NO_BRANCH_MESSAGE = "Owner/Admin Cabang tidak boleh terikat ke cabang";
 
 export const createUserSchema = z
   .object({
@@ -31,7 +31,7 @@ export const createUserSchema = z
     branchId: branchId.optional().transform((v) => v ?? null),
   })
   .superRefine((v, ctx) => {
-    if (v.role !== "PEGAWAI" && v.branchId !== null) {
+    if (v.role !== "PEGAWAI_CABANG" && v.branchId !== null) {
       ctx.addIssue({ code: "custom", path: ["branchId"], message: NO_BRANCH_MESSAGE });
     }
   });
@@ -46,7 +46,7 @@ export const updateUserSchema = z
   })
   .refine((v) => Object.keys(v).length > 0, { error: "Tidak ada data yang diubah" })
   .superRefine((v, ctx) => {
-    if (v.role !== undefined && v.role !== "PEGAWAI" && v.branchId != null) {
+    if (v.role !== undefined && v.role !== "PEGAWAI_CABANG" && v.branchId != null) {
       ctx.addIssue({ code: "custom", path: ["branchId"], message: NO_BRANCH_MESSAGE });
     }
   });

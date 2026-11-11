@@ -20,12 +20,12 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
 };
 
 /**
- * Pegawai tanpa cabang (branch_id = NULL) hanya boleh memakai /auth/*.
+ * Pegawai Cabang tanpa cabang (branch_id = NULL) hanya boleh memakai /auth/*.
  * Pasang pada semua rute data (bagian 3.1).
  */
 export const requireAssignedBranch: RequestHandler = (req, _res, next) => {
   if (!req.user) throw unauthorized();
-  if (req.user.role === "PEGAWAI" && req.user.branchId === null) {
+  if (req.user.role === "PEGAWAI_CABANG" && req.user.branchId === null) {
     throw forbidden("Anda belum ditugaskan ke cabang. Hubungi Owner.");
   }
   next();

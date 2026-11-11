@@ -28,7 +28,9 @@ export function UserCreate() {
                   password: values.password,
                   role: values.role,
                   branchId:
-                    values.role === "PEGAWAI" && values.branchId ? Number(values.branchId) : null,
+                    values.role === "PEGAWAI_CABANG" && values.branchId
+                      ? Number(values.branchId)
+                      : null,
                 },
                 {
                   onSuccess: (user) => {

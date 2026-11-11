@@ -1,4 +1,4 @@
-export type Role = "OWNER" | "SUPERADMIN" | "PEGAWAI";
+export type Role = "OWNER" | "ADMIN_CABANG" | "PEGAWAI_CABANG";
 
 export type AuthUser = {
   id: number;
@@ -11,15 +11,15 @@ export type AuthUser = {
 
 export const ROLE_LABEL: Record<Role, string> = {
   OWNER: "Owner",
-  SUPERADMIN: "SuperAdmin",
-  PEGAWAI: "Pegawai",
+  ADMIN_CABANG: "Admin Cabang",
+  PEGAWAI_CABANG: "Pegawai Cabang",
 };
 
 export const ME_QUERY_KEY = ["auth", "me"] as const;
 
-/** Pegawai yang belum/tidak punya cabang hanya boleh melihat /menunggu-penugasan. */
+/** Pegawai Cabang yang belum/tidak punya cabang hanya boleh melihat /menunggu-penugasan. */
 export function isAwaitingAssignment(user: AuthUser): boolean {
-  return user.role === "PEGAWAI" && user.branchId === null;
+  return user.role === "PEGAWAI_CABANG" && user.branchId === null;
 }
 
 export function homePathFor(user: AuthUser): string {

@@ -16,7 +16,7 @@ import { tabClass } from "./transfer-status";
 const columns = transferColumns({ showBranch: false });
 
 /**
- * Halaman /request-stok (Pegawai). Tab "Request Saya" = request milik cabangnya;
+ * Halaman /request-stok (Pegawai Cabang). Tab "Request Saya" = request milik cabangnya;
  * tab "Kiriman Masuk" = kiriman berstatus DIKIRIM yang perlu dikonfirmasi (bagian 8).
  */
 export function RequestStokList() {

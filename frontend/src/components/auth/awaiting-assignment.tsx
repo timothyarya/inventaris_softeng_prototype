@@ -10,7 +10,7 @@ import { useMe } from "@/hooks/use-auth";
 import { ApiError } from "@/lib/apiClient";
 import { isAwaitingAssignment } from "@/lib/auth";
 
-/** Halaman khusus Pegawai yang belum/tidak punya cabang (bagian 3.1). */
+/** Halaman khusus Pegawai Cabang yang belum/tidak punya cabang (bagian 3.1). */
 export function AwaitingAssignment() {
   const router = useRouter();
   const me = useMe();

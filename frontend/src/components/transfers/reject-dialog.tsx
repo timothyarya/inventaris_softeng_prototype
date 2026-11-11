@@ -80,7 +80,7 @@ function RejectBody({
           <DialogTitle>Tolak request?</DialogTitle>
           <DialogDescription render={<div />}>
             Request <span className="font-mono">{docNo}</span> akan ditolak dan tidak dapat diproses
-            lagi. Pegawai cabang dapat melihat alasannya.
+            lagi. Pegawai Cabang dapat melihat alasannya.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5">

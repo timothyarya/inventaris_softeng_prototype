@@ -24,11 +24,11 @@ type StockRow = {
 
 /**
  * Stok per cabang × produk (bagian 7, 9). Produk tanpa baris `branch_stocks` dianggap qty 0
- * (bagian 14). Produk nonaktif hanya tampil bila masih ada stoknya (untuk Pegawai: tidak
+ * (bagian 14). Produk nonaktif hanya tampil bila masih ada stoknya (untuk Pegawai Cabang: tidak
  * pernah tampil). Stok menipis: `qty < min_stock`, hanya produk aktif dengan `min_stock > 0`.
  */
 export async function listStocks(query: ListStocksQuery, user: AuthUser) {
-  // Pegawai: cabang selalu dari server, parameter client diabaikan (bagian 3.3).
+  // Pegawai Cabang: cabang selalu dari server, parameter client diabaikan (bagian 3.3).
   const branchId = resolveBranchId(user, query.branchId);
 
   if (branchId !== null) {
@@ -50,7 +50,7 @@ export async function listStocks(query: ListStocksQuery, user: AuthUser) {
   // Tanpa filter cabang, hanya cabang aktif; cabang nonaktif tetap bisa dilihat bila dipilih langsung.
   conditions.push(branchId !== null ? Prisma.sql`b.id = ${branchId}` : Prisma.sql`b.is_active`);
   conditions.push(
-    user.role === "PEGAWAI"
+    user.role === "PEGAWAI_CABANG"
       ? Prisma.sql`p.is_active`
       : Prisma.sql`(p.is_active OR COALESCE(bs.qty, 0) > 0)`,
   );

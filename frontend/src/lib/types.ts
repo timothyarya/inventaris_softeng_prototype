@@ -127,7 +127,7 @@ export type TransferItem = {
   qtyReceived: number | null;
   /** qtySent − qtyReceived; null sebelum diterima. */
   shortfall: number | null;
-  /** Hanya untuk Owner/SuperAdmin pada status DIAJUKAN/DISETUJUI. */
+  /** Hanya untuk Owner/Admin Cabang pada status DIAJUKAN/DISETUJUI. */
   warehouseStock?: number;
 };
 

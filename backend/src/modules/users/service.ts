@@ -26,7 +26,7 @@ async function assertAssignableBranch(tx: Prisma.TransactionClient, branchId: nu
   });
   if (!branch) throw notFound("Cabang tidak ditemukan.", "BRANCH_NOT_FOUND");
   if (branch.isMain) {
-    throw conflict("Gudang utama tidak boleh memiliki pegawai.", "MAIN_BRANCH_NO_STAFF");
+    throw conflict("Gudang utama tidak boleh memiliki pegawai cabang.", "MAIN_BRANCH_NO_STAFF");
   }
   if (!branch.isActive) {
     throw conflict("Cabang nonaktif tidak dapat dipilih untuk penugasan.", "BRANCH_INACTIVE");
@@ -106,8 +106,8 @@ export async function createUser(input: CreateUserInput) {
 
 /**
  * Edit user, assign/pindah cabang, ubah role, dan reset password (bagian 4.2 + keputusan 14).
- * - Role Owner/SuperAdmin: branch_id dikosongkan otomatis.
- * - Role Pegawai: cabang boleh kosong; bila diisi harus cabang aktif dan bukan gudang utama.
+ * - Role Owner/Admin Cabang: branch_id dikosongkan otomatis.
+ * - Role Pegawai Cabang: cabang boleh kosong; bila diisi harus cabang aktif dan bukan gudang utama.
  * - Owner aktif terakhir tidak boleh diturunkan role-nya.
  */
 export async function updateUser(id: number, input: UpdateUserInput) {
@@ -121,14 +121,14 @@ export async function updateUser(id: number, input: UpdateUserInput) {
 
     const finalRole = input.role ?? user.role;
     let finalBranchId: number | null;
-    if (finalRole === "PEGAWAI") {
+    if (finalRole === "PEGAWAI_CABANG") {
       finalBranchId = input.branchId !== undefined ? input.branchId : user.branchId;
       if (finalBranchId !== null && finalBranchId !== user.branchId) {
         await assertAssignableBranch(tx, finalBranchId);
       }
     } else {
       if (input.branchId != null) {
-        throw badRequest("Owner/SuperAdmin tidak boleh terikat ke cabang");
+        throw badRequest("Owner/Admin Cabang tidak boleh terikat ke cabang");
       }
       finalBranchId = null;
     }

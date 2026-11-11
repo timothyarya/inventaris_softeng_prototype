@@ -26,7 +26,7 @@ app.get("/api/health", async (_req, res) => {
 app.use("/api/auth", authRouter);
 
 // Semua rute data didaftarkan di bawah penjaga ini: harus login (user dimuat ulang
-// dari DB) dan, untuk Pegawai, sudah punya cabang. Rute per modul dipasang di sini
+// dari DB) dan, untuk Pegawai Cabang, sudah punya cabang. Rute per modul dipasang di sini
 // dengan requireRole(...) masing-masing (fase berikutnya).
 app.use("/api", authenticate, requireAssignedBranch);
 
