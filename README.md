@@ -78,3 +78,10 @@ npm run typecheck
 npm run format         # Prettier
 npm run format:check
 ```
+
+## Autentikasi (Fase 1)
+
+- Login memakai cookie JWT `httpOnly` (nama `token`). Frontend memanggil `/api/*` yang di-proxy Next.js ke Express, jadi cookie bersifat same-origin.
+- `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`.
+- Middleware `authenticate` memuat ulang user dari database di setiap request, sehingga akun yang dinonaktifkan langsung mendapat 401.
+- Pegawai tanpa cabang hanya bisa memakai `/api/auth/*` (endpoint lain 403) dan di frontend diarahkan ke `/menunggu-penugasan`.

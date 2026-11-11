@@ -871,3 +871,10 @@ Keputusan di bagian ini melengkapi bagian 1–13. Jika ada pertentangan dengan b
 ### Laporan Distribusi
 - Rekap status pengajuan hanya mencakup transfer yang berasal dari request (`requested_at` tidak null), difilter berdasarkan `requested_at`, dan dikelompokkan menurut status saat ini.
 - Pengiriman langsung ditampilkan sebagai baris terpisah "Pengiriman langsung", difilter berdasarkan `sent_at`.
+
+### Implementasi Fase 1 (auth & layout)
+- Respons objek tunggal memakai `{ "data": ... }` (konsisten dengan list `{ data, meta }`). `POST /auth/login` dan `GET /auth/me` mengembalikan `{ data: user }`. `POST /auth/logout` mengembalikan 204.
+- Cookie JWT bernama `token`: `httpOnly`, `SameSite=Lax`, `Secure` hanya saat `NODE_ENV=production`, `maxAge` mengikuti `JWT_EXPIRES_IN`. Token hanya memuat id user (`sub`); role dan cabang selalu dimuat ulang dari DB di setiap request.
+- Login gagal (email tidak terdaftar atau password salah) selalu 401 dengan pesan yang sama. Akun nonaktif baru diberi tahu ("Akun Anda dinonaktifkan") setelah password terbukti benar.
+- Semua rute data di bawah `/api` (selain `/api/health` dan `/api/auth/*`) dilewatkan `authenticate` lalu `requireAssignedBranch` (Pegawai tanpa cabang mendapat 403). Rute tak dikenal tanpa login mengembalikan 401, dengan login 404.
+- Frontend: route `(app)` dijaga `AppShell` (401 -> `/login`, Pegawai tanpa cabang -> `/menunggu-penugasan`, role tidak berhak -> halaman 403). Route di sitemap yang belum dibuat ditangkap `[...slug]` sehingga penjaga tetap berlaku dan halaman "tidak ditemukan" tampil di dalam layout.
