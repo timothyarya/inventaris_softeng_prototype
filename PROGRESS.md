@@ -6,15 +6,15 @@ _Terakhir diperbarui: 2026-11-12._
 
 ## 1. Status fase
 
-| Fase | Isi                                          | Status      | Commit             |
-| ---- | -------------------------------------------- | ----------- | ------------------ |
-| 0    | Setup monorepo, Prisma 7, migrasi, seed      | **Selesai** | `039f2ea`          |
-| 1    | Auth, RBAC, layout per role                  | **Selesai** | `dd11755`          |
-| 2    | Data master (cabang, user, kategori, produk) | **Selesai** | `5dec2ac`          |
-| 3    | Stock service & stok masuk                   | **Selesai** | `6056011`          |
-| 4    | Transfer stok                                | **Selesai** | `9cd6ed1`          |
-| 5    | Stok opname                                  | **Selesai** | commit "Fase 5: …" |
-| 6–9  | Riwayat → pengujian                          | Belum       | —                  |
+| Fase | Isi                                          | Status      | Commit    |
+| ---- | -------------------------------------------- | ----------- | --------- |
+| 0    | Setup monorepo, Prisma 7, migrasi, seed      | **Selesai** | `039f2ea` |
+| 1    | Auth, RBAC, layout per role                  | **Selesai** | `dd11755` |
+| 2    | Data master (cabang, user, kategori, produk) | **Selesai** | `5dec2ac` |
+| 3    | Stock service & stok masuk                   | **Selesai** | `6056011` |
+| 4    | Transfer stok                                | **Selesai** | `9cd6ed1` |
+| 5    | Stok opname                                  | **Selesai** | `80e6403` |
+| 6–9  | Riwayat → pengujian                          | Belum       | —         |
 
 ### Yang sudah ada
 
