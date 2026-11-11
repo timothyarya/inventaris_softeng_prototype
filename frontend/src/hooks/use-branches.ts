@@ -43,6 +43,8 @@ function useInvalidateBranches() {
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ["branches"] }),
       queryClient.invalidateQueries({ queryKey: ["users"] }),
+      // Daftar cabang aktif memengaruhi tampilan stok.
+      queryClient.invalidateQueries({ queryKey: ["stocks"] }),
     ]);
 }
 

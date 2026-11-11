@@ -21,6 +21,7 @@ import type { ProductInput } from "@/hooks/use-products";
 import { getErrorMessage } from "@/lib/apiClient";
 import type { Product } from "@/lib/types";
 import { ProductForm } from "./product-form";
+import { ProductStockCard } from "./product-stock-card";
 
 export function ProductDetail() {
   const params = useParams<{ id: string }>();
@@ -163,16 +164,7 @@ function ProductDetailView({ product }: { product: Product }) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Stok per cabang</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground text-sm">
-            Stok per cabang akan ditampilkan setelah fitur stok tersedia.
-          </p>
-        </CardContent>
-      </Card>
+      <ProductStockCard productId={product.id} />
 
       <ConfirmDialog
         open={confirm === "deactivate"}

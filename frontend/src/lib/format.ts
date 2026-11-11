@@ -18,3 +18,20 @@ export function formatDateTime(iso: string): string {
     timeZone: "Asia/Jakarta",
   }).format(new Date(iso));
 }
+
+/** Tanggal hari ini (YYYY-MM-DD) di zona Asia/Jakarta. */
+export function todayJakarta(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+/** Tanggal murni (YYYY-MM-DD, tanpa jam) ditampilkan apa adanya tanpa pergeseran zona waktu. */
+export function formatDate(date: string): string {
+  return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeZone: "UTC" }).format(
+    new Date(`${date}T00:00:00Z`),
+  );
+}

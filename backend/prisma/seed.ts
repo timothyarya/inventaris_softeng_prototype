@@ -2,9 +2,11 @@ import "dotenv/config";
 import bcrypt from "bcrypt";
 import { env } from "../src/config/env";
 import { prisma } from "../src/config/prisma";
+import { jakartaDate } from "../src/utils/datetime";
+import { createStockIn } from "../src/modules/stock-ins/service";
 
-// Seed Fase 0: cabang, user, kategori, produk.
-// Stok masuk contoh ditambahkan di Fase 3 lewat stockService (bagian 14).
+// Seed: cabang, user, kategori, produk, dan 1 stok masuk contoh ke gudang (lewat stockService,
+// sehingga movement ikut tercatat).
 // Idempotent: aman dijalankan berulang kali (upsert, tidak menimpa data yang sudah ada).
 
 const BRANCHES = [
@@ -86,10 +88,44 @@ async function main() {
     });
   }
 
+  // Stok masuk contoh: hanya dibuat jika belum ada stok masuk sama sekali.
+  // Sengaja ada produk di bawah stok minimum (ATK-004, ELK-002) dan tanpa stok (MKN-003)
+  // agar penanda stok menipis bisa dicoba.
+  let sampleStockIn: string | null = null;
+  if ((await prisma.stockIn.count()) === 0) {
+    const owner = await prisma.user.findUniqueOrThrow({ where: { email: "owner@softeng.local" } });
+    const qtyBySku: Record<string, number> = {
+      "ATK-001": 200,
+      "ATK-002": 120,
+      "ATK-003": 40,
+      "ATK-004": 15,
+      "ELK-001": 60,
+      "ELK-002": 8,
+      "ELK-003": 80,
+      "MKN-001": 100,
+      "MKN-002": 50,
+    };
+    const products = await prisma.product.findMany({
+      where: { sku: { in: Object.keys(qtyBySku) } },
+    });
+    const created = await createStockIn(
+      {
+        date: jakartaDate(),
+        supplierName: "PT Supplier Contoh",
+        invoiceNo: "INV-CONTOH-001",
+        note: "Stok awal contoh dari seed",
+        items: products.map((p) => ({ productId: p.id, qty: qtyBySku[p.sku]! })),
+      },
+      owner.id,
+    );
+    sampleStockIn = created.docNo;
+  }
+
   console.log("Seed selesai.");
   console.log(`  Cabang   : ${BRANCHES.map((b) => b.code).join(", ")}`);
   console.log(`  Kategori : ${CATEGORIES.length}`);
   console.log(`  Produk   : ${PRODUCTS.length}`);
+  console.log(`  Stok masuk contoh : ${sampleStockIn ?? "sudah ada, dilewati"}`);
   console.log("  Akun (password sama untuk semuanya):");
   for (const u of users) console.log(`    ${u.role.padEnd(10)} ${u.email}`);
   console.log(`  Password : ${env.SEED_DEFAULT_PASSWORD}`);

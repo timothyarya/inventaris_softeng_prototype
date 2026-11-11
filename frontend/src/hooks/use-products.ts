@@ -43,6 +43,8 @@ function useInvalidateProducts() {
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ["products"] }),
       queryClient.invalidateQueries({ queryKey: ["categories"] }),
+      // Stok menampilkan SKU, stok minimum, dan status produk.
+      queryClient.invalidateQueries({ queryKey: ["stocks"] }),
     ]);
 }
 
@@ -86,6 +88,23 @@ export function useDeleteProduct(id: number) {
       // Buang cache detail agar tidak dimuat ulang (404) sebelum halaman berpindah.
       queryClient.removeQueries({ queryKey: ["products", "detail", id] });
       return invalidate();
+    },
+  });
+}
+
+/** Semua produk aktif untuk dropdown (memuat halaman demi halaman sampai habis). */
+export function useAllActiveProducts() {
+  return useQuery({
+    queryKey: ["products", "all-active"],
+    queryFn: async () => {
+      const all: Product[] = [];
+      for (let page = 1; ; page++) {
+        const res = await api<Paginated<Product>>(
+          `/products${toQueryString({ page, pageSize: 100, status: "active" })}`,
+        );
+        all.push(...res.data);
+        if (all.length >= res.meta.total || res.data.length === 0) return all;
+      }
     },
   });
 }

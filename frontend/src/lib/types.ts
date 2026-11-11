@@ -54,3 +54,40 @@ export type Product = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type StockRow = {
+  branch: BranchRef & { isActive: boolean };
+  product: {
+    id: number;
+    sku: string;
+    name: string;
+    unit: string;
+    minStock: number;
+    isActive: boolean;
+    category: string | null;
+  };
+  qty: number;
+  isLow: boolean;
+};
+
+export type StockInSummary = {
+  id: number;
+  docNo: string;
+  /** YYYY-MM-DD */
+  date: string;
+  supplierName: string;
+  invoiceNo: string | null;
+  note: string | null;
+  createdAt: string;
+  createdBy: { id: number; name: string };
+  itemCount: number;
+  totalQty: number;
+};
+
+export type StockInDetail = StockInSummary & {
+  items: {
+    id: number;
+    qty: number;
+    product: { id: number; sku: string; name: string; unit: string };
+  }[];
+};
