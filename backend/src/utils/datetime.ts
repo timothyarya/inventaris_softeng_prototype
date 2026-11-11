@@ -22,3 +22,10 @@ export function isValidDateString(value: string): boolean {
 
 /** Kolom `@db.Date` Prisma menerima Date pada tengah malam UTC dari tanggal tersebut. */
 export const dateOnly = (value: string): Date => new Date(`${value}T00:00:00Z`);
+
+/** Awal hari (00:00 WIB) dari tanggal YYYY-MM-DD, sebagai instan UTC (bagian 5.6). */
+export const jakartaDayStart = (value: string): Date => new Date(`${value}T00:00:00+07:00`);
+
+/** Awal hari berikutnya (eksklusif) untuk batas atas rentang tanggal inklusif. */
+export const jakartaNextDayStart = (value: string): Date =>
+  new Date(jakartaDayStart(value).getTime() + 24 * 60 * 60 * 1000);

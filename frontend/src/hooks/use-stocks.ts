@@ -23,3 +23,24 @@ export function useStocks(params: StockListParams, options: { enabled?: boolean 
     enabled: options.enabled ?? true,
   });
 }
+
+/**
+ * Stok seluruh produk di satu cabang sebagai peta productId -> qty (semua halaman).
+ * Dipakai form pengiriman langsung untuk menampilkan stok gudang di samping tiap produk.
+ */
+export function useBranchStockMap(branchId: number | undefined) {
+  return useQuery({
+    queryKey: ["stocks", "map", branchId],
+    enabled: branchId !== undefined && branchId > 0,
+    queryFn: async () => {
+      const map: Record<number, number> = {};
+      for (let page = 1; ; page++) {
+        const res = await api<Paginated<StockRow>>(
+          `/stocks${toQueryString({ page, pageSize: 100, branchId })}`,
+        );
+        for (const row of res.data) map[row.product.id] = row.qty;
+        if (page * res.meta.pageSize >= res.meta.total || res.data.length === 0) return map;
+      }
+    },
+  });
+}

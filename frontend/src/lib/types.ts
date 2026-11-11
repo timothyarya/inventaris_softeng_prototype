@@ -91,3 +91,53 @@ export type StockInDetail = StockInSummary & {
     product: { id: number; sku: string; name: string; unit: string };
   }[];
 };
+
+export type TransferStatus =
+  "DIAJUKAN" | "DISETUJUI" | "DITOLAK" | "DIBATALKAN" | "DIKIRIM" | "DITERIMA";
+
+export type TransferOrigin = "REQUEST" | "DIRECT";
+
+export type TransferSummary = {
+  id: number;
+  docNo: string;
+  status: TransferStatus;
+  origin: TransferOrigin;
+  fromBranch: BranchRef;
+  toBranch: BranchRef;
+  note: string | null;
+  createdAt: string;
+  requestedAt: string | null;
+  sentAt: string | null;
+  receivedAt: string | null;
+  itemCount: number;
+  /** null pada pengiriman langsung / belum dikirim / belum diterima. */
+  totalRequested: number | null;
+  totalSent: number | null;
+  totalReceived: number | null;
+};
+
+type UserRef = { id: number; name: string };
+
+export type TransferItem = {
+  id: number;
+  product: { id: number; sku: string; name: string; unit: string; isActive: boolean };
+  qtyRequested: number | null;
+  qtyApproved: number | null;
+  qtySent: number | null;
+  qtyReceived: number | null;
+  /** qtySent − qtyReceived; null sebelum diterima. */
+  shortfall: number | null;
+  /** Hanya untuk Owner/SuperAdmin pada status DIAJUKAN/DISETUJUI. */
+  warehouseStock?: number;
+};
+
+export type TransferDetail = TransferSummary & {
+  rejectReason: string | null;
+  cancelReason: string | null;
+  requestedBy: UserRef | null;
+  approvedBy: UserRef | null;
+  approvedAt: string | null;
+  sentBy: UserRef | null;
+  receivedBy: UserRef | null;
+  items: TransferItem[];
+};

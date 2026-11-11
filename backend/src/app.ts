@@ -9,6 +9,7 @@ import { categoriesRouter } from "./modules/categories/routes";
 import { productsRouter } from "./modules/products/routes";
 import { stockInsRouter } from "./modules/stock-ins/routes";
 import { stocksRouter } from "./modules/stocks/routes";
+import { transfersRouter } from "./modules/transfers/routes";
 import { usersRouter } from "./modules/users/routes";
 
 export const app = express();
@@ -35,6 +36,7 @@ app.use("/api/categories", categoriesRouter);
 app.use("/api/products", productsRouter);
 app.use("/api/stocks", stocksRouter);
 app.use("/api/stock-ins", stockInsRouter);
+app.use("/api/transfers", transfersRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

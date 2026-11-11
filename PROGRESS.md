@@ -11,8 +11,9 @@ _Terakhir diperbarui: 2026-11-11._
 | 0    | Setup monorepo, Prisma 7, migrasi, seed      | **Selesai** | `039f2ea`          |
 | 1    | Auth, RBAC, layout per role                  | **Selesai** | `dd11755`          |
 | 2    | Data master (cabang, user, kategori, produk) | **Selesai** | `5dec2ac`          |
-| 3    | Stock service & stok masuk                   | **Selesai** | commit "Fase 3: …" |
-| 4–9  | Transfer → pengujian                         | Belum       | —                  |
+| 3    | Stock service & stok masuk                   | **Selesai** | `6056011`          |
+| 4    | Transfer stok                                | **Selesai** | commit "Fase 4: …" |
+| 5–9  | Opname → pengujian                           | Belum       | —                  |
 
 ### Yang sudah ada
 
@@ -20,6 +21,8 @@ _Terakhir diperbarui: 2026-11-11._
 - **Fase 1:** `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`; middleware `authenticate` (memuat ulang user dari DB di setiap request), `requireRole`, `requireAssignedBranch`, `validate`, helper scoping `resolveBranchId`; frontend: halaman login, layout sidebar + header per role (drawer di mobile), halaman 403, `/menunggu-penugasan`, penjaga akses `AppShell`, dashboard placeholder.
 - **Fase 2:** modul backend `branches`, `users`, `categories`, `products` (CRUD, aktif/nonaktif, paginasi, pencarian, filter; nonaktif cabang transaksional dengan efek ke pegawai, transfer DIAJUKAN, dan opname MENUNGGU); utilitas `pagination`, `http`, `password`; frontend `/cabang`, `/cabang/baru`, `/cabang/[id]`, `/users`, `/users/baru`, `/users/[id]`, `/kategori` (dialog), `/produk`, `/produk/baru`, `/produk/[id]` dengan komponen bersama `DataTable`, `ConfirmDialog`, `FormField`, `PageHeader`; hook TanStack Query per modul.
 - **Fase 3:** `stockService.applyMovement` (satu-satunya jalan mengubah stok; 422 bila negatif), generator nomor dokumen `generateDocNo` (WIB, atomik), util tanggal WIB, `GET/POST /stock-ins` dan `GET /stock-ins/:id`, `GET /stocks`; seed stok masuk contoh lewat service; frontend `/stok` (Owner/SA, pilih cabang), `/inventaris` (Pegawai), `/stok-masuk`, `/stok-masuk/baru` (form multi-item + konfirmasi), `/stok-masuk/[id]`, kartu "Stok per cabang" di `/produk/[id]`, dan ringkasan stok di `/cabang/[id]` yang kini berisi data.
+
+- **Fase 4:** modul backend `transfers`: `GET /transfers`, `GET /transfers/:id`, `POST /transfers/requests`, `/direct`, `/:id/cancel|approve|reject|send|receive`; kirim memakai `stockService` (`TRANSFER_OUT`) dengan pengecekan stok gudang dan penolakan utuh 422, terima memakai `TRANSFER_IN`; semua aksi mengunci baris transfer sehingga aksi ganda/bersamaan dijawab 409; frontend `/transfer` (tab per status), `/transfer/kirim`, `/transfer/[id]` (riwayat proses, tombol aksi per role+status, dialog qty/alasan), `/request-stok` (tab Request Saya dan Kiriman Masuk), `/request-stok/baru`.
 
 ## 2. Cara menjalankan
 
@@ -85,6 +88,14 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 - `/stok` per cabang yang dipilih, default gudang utama; `GET /stocks` tanpa `branchId` mengembalikan semua cabang aktif.
 - Seed menyisakan produk di bawah stok minimum dan tanpa stok agar penanda "Menipis" bisa dicoba.
 
+### Keputusan implementasi Fase 4 (lengkapnya di bagian 14 INSTRUCTION.md)
+
+- Produk ganda dalam satu request/pengiriman ditolak; qty 1–1.000.000 per item, maksimal 200 baris. Request boleh memuat produk yang stok gudangnya 0 (stok baru dicek saat Kirim). Pegawai tidak melihat stok gudang; form pengiriman langsung Owner/SA menampilkannya.
+- Setujui mengisi `qty_approved` (bawaan = diminta, boleh disesuaikan/0); form Kirim terisi dari `qty_approved` dan boleh diubah. Setujui dan Kirim butuh minimal satu item > 0. Terima: 0 … `qty_sent`, bawaan = dikirim; selisih tidak menjadi movement.
+- Yang menolak dicatat di `approved_by/approved_at` (tidak ada kolom terpisah); membatalkan tidak meminta alasan.
+- Kirim yang kekurangan stok ditolak utuh dengan 422 yang menyebut semua item yang kurang; nomor dokumen dan stok tidak berubah.
+- Detail transfer memuat `warehouseStock` hanya untuk Owner/SA pada status DIAJUKAN/DISETUJUI; `shortfall` bernilai null sebelum diterima.
+
 ### Hal teknis lain
 
 - **Seed Fase 0 tanpa stok masuk contoh.** Stok masuk contoh baru ditambahkan di Fase 3 lewat `stockService` (disepakati).
@@ -100,31 +111,32 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 ## 4. Masalah yang belum selesai
 
 1. **`npm run db:reset` belum teruji.** Prisma memblokir `migrate reset` dari agen AI tanpa persetujuan eksplisit pemilik proyek. Script sudah diperbaiki (`prisma migrate reset --force && prisma generate && prisma db seed`), tetapi perlu dijalankan sendiri sekali. Perintah itu menghapus semua data database development.
-2. **Skrip uji tidak masuk repo.** Pengujian Fase 1 (46 cek HTTP, 14 cek `requireRole`/scoping, 62 cek browser) Fase 2 (153 cek API, 56 cek browser), dan Fase 3 (82 cek API, 21 cek langsung ke `stockService`/`generateDocNo`, 50 cek browser) dijalankan lewat skrip sementara di folder scratchpad dan tidak di-commit. Tes otomatis di repo baru dibuat di Fase 9 (Vitest + Supertest).
+2. **Skrip uji tidak masuk repo.** Pengujian Fase 1 (46 cek HTTP, 14 cek `requireRole`/scoping, 62 cek browser) Fase 2 (153 cek API, 56 cek browser), Fase 3 (82 cek API, 21 cek langsung ke `stockService`/`generateDocNo`, 50 cek browser), dan Fase 4 (142 cek API termasuk konkurensi, 71 cek browser) dijalankan lewat skrip sementara di folder scratchpad dan tidak di-commit. Tes otomatis di repo baru dibuat di Fase 9 (Vitest + Supertest).
 3. **Database tes belum dipakai.** `softeng_inventaris_test` sudah dibuat tetapi belum dimigrasi. Ingat: URL migrasi Prisma 7 dibaca dari `prisma.config.ts`, jadi untuk tes perlu `DATABASE_URL` yang di-set lewat `cross-env` (lihat Fase 9).
 4. **`npm audit`** melaporkan beberapa kerentanan tingkat moderate (7 saat Fase 0) dan ESLint 9.39.5 memberi peringatan "no longer supported". Belum ditinjau.
 5. **Keterbatasan yang disengaja (spec tidak memintanya):**
    - Logout tidak mencabut token JWT; token tetap valid sampai kedaluwarsa. Akun nonaktif tetap ditolak lewat pemuatan ulang user.
    - Tidak ada pembatasan percobaan login.
-6. **Sebagian halaman di sidebar belum ada.** Produk, Kategori, Cabang, User (Fase 2), Stok Cabang, Inventaris, dan Stok Masuk (Fase 3) sudah ada. Transfer, Request Stok, Opname, Riwayat, dan Laporan masih menampilkan "Halaman tidak ditemukan" di dalam layout sampai fasenya dikerjakan.
+6. **Sebagian halaman di sidebar belum ada.** Produk, Kategori, Cabang, User (Fase 2), Stok Cabang, Inventaris, Stok Masuk (Fase 3), Transfer, dan Request Stok (Fase 4) sudah ada. Opname, Riwayat, dan Laporan masih menampilkan "Halaman tidak ditemukan" di dalam layout sampai fasenya dikerjakan.
 7. **Folder kosong dari struktur spec** (`modules/*` selain `auth`, `services/`) belum ada di git. Dibuat saat dipakai.
-8. **Ringkasan stok cabang kosong di cabang baru:** cabang tanpa stok menampilkan semua produk aktif ber-`min_stock > 0` sebagai "stok menipis" (qty 0 < min), sesuai definisi yang disepakati. Wajar sampai ada transfer (Fase 4).
-9. **Fase 2 tidak menguji penolakan cabang saat ada transfer DISETUJUI/DIKIRIM lewat UI**; skenarionya diuji di level API dengan data yang disisipkan lewat psql (lalu dibersihkan). Pengujian lewat UI menunggu fitur transfer (Fase 4).
+8. **Ringkasan stok cabang kosong di cabang baru:** cabang tanpa stok menampilkan semua produk aktif ber-`min_stock > 0` sebagai "stok menipis" (qty 0 < min), sesuai definisi yang disepakati. Wajar sampai ada transfer yang diterima.
+9. **Skenario uji 9 (nonaktif cabang dengan transfer DISETUJUI/DIKIRIM)** kini diuji di Fase 4 lewat transfer sungguhan di level API (ditolak 409; DIAJUKAN otomatis dibatalkan setelah transfer selesai). Belum ada pengujian lewat klik di UI untuk skenario ini.
+10. **Data uji dibersihkan manual.** Skrip uji membuat data (transfer, stok masuk, cabang `ZT…`) lalu dihapus lewat skrip pembersih khusus; data yang Anda input sendiri tidak disentuh. Di Fase 9 tes memakai database terpisah sehingga tidak perlu lagi.
+11. **Cabang yang dinonaktifkan tidak bisa menerima kiriman langsung maupun request**, tetapi transfer yang sudah DISETUJUI/DIKIRIM ke cabang itu memblokir penonaktifan (409) sehingga tidak ada transfer yang menggantung.
 
-## 5. Langkah berikutnya: Fase 4 — Transfer Stok
+## 5. Langkah berikutnya: Fase 5 — Stok Opname
 
-Cakupan (INSTRUCTION.md bagian 12, aturan 4.5, API bagian 7, sitemap bagian 9):
+Cakupan (INSTRUCTION.md bagian 12, aturan 4.6, API bagian 7, sitemap bagian 9):
 
-**Backend** (modul `transfers`):
+**Backend** (modul `opnames`):
 
-- Request pegawai (`POST /transfers/requests`, DIAJUKAN), pengiriman langsung Owner/SA (`POST /transfers/direct`, langsung DIKIRIM), batalkan (pegawai), setujui (boleh menyesuaikan `qty_approved`), tolak (alasan wajib), kirim, terima.
-- Hanya gudang utama → cabang aktif non-gudang. Transisi tidak valid 409; status dibaca ulang di dalam transaksi.
-- **Kirim:** cek stok gudang dengan row lock, kurangi lewat `stockService` (`TRANSFER_OUT`, negatif); 422 bila kurang. **Terima:** tambah stok cabang tujuan sebesar `qty_diterima` (`TRANSFER_IN`); selisih tidak menjadi movement. Item dengan qty 0 tidak membuat movement.
-- Nomor dokumen `TR` (sudah ada generatornya). Pegawai yang mengakses transfer cabang lain mendapat 404.
-- `GET /transfers` (filter status, cabang, tanggal) dan `GET /transfers/:id`.
+- Buat opname (Pegawai untuk cabangnya; Owner/SA untuk cabang aktif mana pun termasuk gudang utama): sistem mengisi produk aktif dengan `qty_sistem` saat itu, user mengisi `qty_fisik` untuk produk yang dihitung; `selisih = qty_fisik − qty_sistem`; keterangan per item opsional (mis. "retur", "rusak", "hilang").
+- Hanya 1 opname `MENUNGGU` per cabang (409; dijaga juga oleh unique index parsial di DB). Nomor dokumen `OP` (generator sudah ada).
+- **Setujui** (Owner/SA): dalam satu transaksi, tiap item berselisih ≠ 0 menambahkan **selisih** ke stok (bukan menimpa) lewat `stockService` (`OPNAME`, bertanda); 422 bila stok jadi negatif. **Tolak:** catatan verifikasi wajib, stok tidak berubah.
+- `GET /opnames` (scoped untuk Pegawai) dan `GET /opnames/:id`.
 
-**Frontend:** `/transfer` (tab per status), `/transfer/kirim`, `/transfer/[id]` (timeline status + tombol aksi sesuai role dan status), `/request-stok` (tab Request Saya dan Kiriman Masuk), `/request-stok/baru`.
+**Frontend:** `/opname` (daftar + form buat, Pegawai dan Owner/SA) dan detail dengan tombol verifikasi untuk Owner/SA.
 
-**Kriteria selesai:** semua transisi valid berjalan dan transisi tidak valid ditolak; stok gudang tidak bisa minus. Skenario uji yang terkait: nonaktif cabang dengan transfer DISETUJUI/DIKIRIM (skenario 9) kini bisa diuji lewat UI.
+**Kriteria selesai:** opname disetujui mengubah stok sebesar selisih dan tercatat di movement; opname kedua saat masih ada yang menunggu ditolak; stok tidak bisa minus.
 
-**Yang perlu ditanyakan sebelum mulai** (spec belum tegas): produk ganda dalam satu request/pengiriman, batas qty per item, apakah request boleh memuat produk yang stok gudangnya 0, dan tampilan stok gudang saat mengisi form.
+**Yang perlu ditanyakan sebelum mulai** (spec belum tegas): apakah form opname memuat semua produk aktif sekaligus (isi yang dihitung saja) atau pengguna memilih produk satu per satu; apakah `qty_fisik` yang sama dengan `qty_sistem` (selisih 0) disimpan sebagai item; apakah satu opname boleh tanpa item berselisih; batas jumlah item dan panjang keterangan; rute dan menu (`/opname` untuk semua role, pada spec belum ada rute buat dan detail terpisah).

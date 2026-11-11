@@ -15,17 +15,18 @@ export type BranchInput = {
 };
 export type BranchUpdateInput = { name: string; address: string | null; phone: string | null };
 
-export function useBranches(params: BranchListParams) {
+export function useBranches(params: BranchListParams, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ["branches", "list", params],
     queryFn: () => api<Paginated<Branch>>(`/branches${toQueryString(params)}`),
     placeholderData: keepPreviousData,
+    enabled: options.enabled ?? true,
   });
 }
 
 /** Pilihan cabang aktif (untuk assign user, filter, dan dropdown lain). */
-export function useActiveBranches() {
-  return useBranches({ page: 1, pageSize: 100, active: true });
+export function useActiveBranches(options: { enabled?: boolean } = {}) {
+  return useBranches({ page: 1, pageSize: 100, active: true }, options);
 }
 
 export function useBranch(id: number) {
