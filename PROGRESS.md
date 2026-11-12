@@ -2,19 +2,20 @@
 
 Catatan status pengerjaan. Spesifikasi lengkap ada di [`INSTRUCTION.md`](./INSTRUCTION.md); keputusan tambahan ada di bagian 14 file itu.
 
-_Terakhir diperbarui: 2026-11-12._
+_Terakhir diperbarui: 2026-11-13._
 
 ## 1. Status fase
 
-| Fase | Isi                                          | Status      | Commit    |
-| ---- | -------------------------------------------- | ----------- | --------- |
-| 0    | Setup monorepo, Prisma 7, migrasi, seed      | **Selesai** | `039f2ea` |
-| 1    | Auth, RBAC, layout per role                  | **Selesai** | `dd11755` |
-| 2    | Data master (cabang, user, kategori, produk) | **Selesai** | `5dec2ac` |
-| 3    | Stock service & stok masuk                   | **Selesai** | `6056011` |
-| 4    | Transfer stok                                | **Selesai** | `9cd6ed1` |
-| 5    | Stok opname                                  | **Selesai** | `80e6403` |
-| 6–9  | Riwayat → pengujian                          | Belum       | —         |
+| Fase | Isi                                          | Status      | Commit             |
+| ---- | -------------------------------------------- | ----------- | ------------------ |
+| 0    | Setup monorepo, Prisma 7, migrasi, seed      | **Selesai** | `039f2ea`          |
+| 1    | Auth, RBAC, layout per role                  | **Selesai** | `dd11755`          |
+| 2    | Data master (cabang, user, kategori, produk) | **Selesai** | `5dec2ac`          |
+| 3    | Stock service & stok masuk                   | **Selesai** | `6056011`          |
+| 4    | Transfer stok                                | **Selesai** | `9cd6ed1`          |
+| 5    | Stok opname                                  | **Selesai** | `80e6403`          |
+| 6    | Riwayat pergerakan stok                      | **Selesai** | commit "Fase 6: …" |
+| 7–9  | Dashboard → pengujian                        | Belum       | —                  |
 
 ### Yang sudah ada
 
@@ -25,6 +26,7 @@ _Terakhir diperbarui: 2026-11-12._
 
 - **Fase 4:** modul backend `transfers`: `GET /transfers`, `GET /transfers/:id`, `POST /transfers/requests`, `/direct`, `/:id/cancel|approve|reject|send|receive`; kirim memakai `stockService` (`TRANSFER_OUT`) dengan pengecekan stok gudang dan penolakan utuh 422, terima memakai `TRANSFER_IN`; semua aksi mengunci baris transfer sehingga aksi ganda/bersamaan dijawab 409; frontend `/transfer` (tab per status), `/transfer/kirim`, `/transfer/[id]` (riwayat proses, tombol aksi per role+status, dialog qty/alasan), `/request-stok` (tab Request Saya dan Kiriman Masuk), `/request-stok/baru`.
 - **Fase 5:** modul backend `opnames`: `GET /opnames`, `GET /opnames/:id`, `GET /opnames/prefill`, `POST /opnames`, `POST /opnames/:id/approve|reject`; qty sistem dibaca server saat simpan, hanya satu opname MENUNGGU per cabang (409, kunci baris cabang), setujui menerapkan **selisih** ke stok saat ini lewat `stockService` (`OPNAME`) dalam satu transaksi dengan 422 bila stok jadi negatif, tolak wajib catatan; aturan siapa yang boleh memverifikasi menurut role pembuat; frontend `/opname`, `/opname/baru`, `/opname/[id]`.
+- **Fase 6:** modul backend `movements`: `GET /movements` (hanya baca; filter cabang, produk, tipe, rentang tanggal WIB; Pegawai Cabang dipaksa ke cabangnya; paginasi); frontend `/riwayat` dengan tabel sesuai spec, label tipe dan qty berwarna, tautan ke dokumen sumber, dan tata letak ringkas di layar kecil. Koneksi database kini memaksa zona sesi UTC (lihat Keputusan Fase 6).
 
 ## 2. Cara menjalankan
 
@@ -106,6 +108,12 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 - Tidak ada endpoint batal/ubah opname (spec tidak memintanya). Opname salah ditolak lalu dibuat ulang.
 - Pesan 422 saat stok jadi negatif menyebut SKU dan nama produk; opname tetap MENUNGGU sehingga verifikator dapat menolaknya.
 
+### Keputusan implementasi Fase 6 (lengkapnya di bagian 14 INSTRUCTION.md)
+
+- Dari jawaban Anda: tautan nomor dokumen ke halaman detail yang sudah ada (stok masuk hanya tautan untuk Owner/Admin Gudang), rentang tanggal bawaan kosong (semua), filter produk berupa dropdown (produk nonaktif tetap muncul untuk admin), label tipe berbahasa Indonesia dengan qty hijau/merah. Tanpa tanya (sesuai pola daftar lain): urutan terbaru dulu, 20 baris per halaman, tanpa ekspor.
+- **Bug zona waktu ditemukan dan diperbaiki:** sesi PostgreSQL di mesin ini memakai `Asia/Bangkok` sehingga filter tanggal pada kolom `timestamptz` bergeser ±7 jam. Sekarang koneksi memaksa `timezone=UTC`. Ini juga memperbaiki filter tanggal di daftar transfer (Fase 4) yang kemungkinan terdampak; tidak ada data yang berubah.
+- Pegawai Cabang tidak dapat memilih produk nonaktif pada dropdown produk (pembatasan `GET /products` yang ada); riwayat produk nonaktif di cabangnya tetap tampil di daftar tanpa filter.
+
 ### Penggantian nama role (setelah Fase 4)
 
 - SuperAdmin → **Admin Gudang**, Pegawai → **Pegawai Cabang** (Owner tetap); hak akses sama. Nilai enum di database dan API ikut diganti (`ADMIN_GUDANG`, `PEGAWAI_CABANG`) lewat migrasi `rename_roles`; setelah `git pull` jalankan `npm run db:deploy --workspace backend` (atau `npm run db:migrate`).
@@ -131,34 +139,39 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 ## 4. Masalah yang belum selesai
 
 1. **`npm run db:reset` belum teruji.** Prisma memblokir `migrate reset` dari agen AI tanpa persetujuan eksplisit pemilik proyek. Script sudah diperbaiki (`prisma migrate reset --force && prisma generate && prisma db seed`), tetapi perlu dijalankan sendiri sekali. Perintah itu menghapus semua data database development.
-2. **Skrip uji tidak masuk repo.** Pengujian Fase 1 (46 cek HTTP, 14 cek `requireRole`/scoping, 62 cek browser) Fase 2 (153 cek API, 56 cek browser), Fase 3 (82 cek API, 21 cek langsung ke `stockService`/`generateDocNo`, 50 cek browser), dan Fase 4 (142 cek API termasuk konkurensi, 71 cek browser), dan Fase 5 (105 cek API termasuk konkurensi dan matriks persetujuan, 60 cek browser termasuk layar 390px) dijalankan lewat skrip sementara di folder scratchpad dan tidak di-commit. Tes otomatis di repo baru dibuat di Fase 9 (Vitest + Supertest).
+2. **Skrip uji tidak masuk repo.** Pengujian Fase 1 (46 cek HTTP, 14 cek `requireRole`/scoping, 62 cek browser) Fase 2 (153 cek API, 56 cek browser), Fase 3 (82 cek API, 21 cek langsung ke `stockService`/`generateDocNo`, 50 cek browser), dan Fase 4 (142 cek API termasuk konkurensi, 71 cek browser), Fase 5 (105 cek API termasuk konkurensi dan matriks persetujuan, 60 cek browser termasuk layar 390px), dan Fase 6 (56 cek API termasuk batas hari WIB dan integritas saldo, 29 cek browser) dijalankan lewat skrip sementara di folder scratchpad dan tidak di-commit. Tes otomatis di repo baru dibuat di Fase 9 (Vitest + Supertest).
 3. **Database tes belum dipakai.** `softeng_inventaris_test` sudah dibuat tetapi belum dimigrasi. Ingat: URL migrasi Prisma 7 dibaca dari `prisma.config.ts`, jadi untuk tes perlu `DATABASE_URL` yang di-set lewat `cross-env` (lihat Fase 9).
 4. **`npm audit`** melaporkan beberapa kerentanan tingkat moderate (7 saat Fase 0) dan ESLint 9.39.5 memberi peringatan "no longer supported". Belum ditinjau.
 5. **Keterbatasan yang disengaja (spec tidak memintanya):**
    - Logout tidak mencabut token JWT; token tetap valid sampai kedaluwarsa. Akun nonaktif tetap ditolak lewat pemuatan ulang user.
    - Tidak ada pembatasan percobaan login.
-6. **Sebagian halaman di sidebar belum ada.** Produk, Kategori, Cabang, User (Fase 2), Stok Cabang, Inventaris, Stok Masuk (Fase 3), Transfer, Request Stok (Fase 4), dan Stok Opname (Fase 5) sudah ada. Riwayat dan Laporan masih menampilkan "Halaman tidak ditemukan" di dalam layout sampai fasenya dikerjakan.
+6. **Sebagian halaman di sidebar belum ada.** Produk, Kategori, Cabang, User (Fase 2), Stok Cabang, Inventaris, Stok Masuk (Fase 3), Transfer, Request Stok (Fase 4), dan Stok Opname (Fase 5), dan Riwayat Stok (Fase 6) sudah ada. Dashboard hanya berupa placeholder dan Laporan masih menampilkan "Halaman tidak ditemukan" di dalam layout sampai fasenya dikerjakan.
 7. **Folder kosong dari struktur spec** (`modules/*` selain `auth`, `services/`) belum ada di git. Dibuat saat dipakai.
 8. **Cabang baru tanpa stok:** semua produk aktifnya berstatus Habis (qty 0) sampai ada transfer yang diterima. Wajar.
 9. **Skenario uji 9 (nonaktif cabang dengan transfer DISETUJUI/DIKIRIM)** kini diuji di Fase 4 lewat transfer sungguhan di level API (ditolak 409; DIAJUKAN otomatis dibatalkan setelah transfer selesai). Belum ada pengujian lewat klik di UI untuk skenario ini.
-10. **Data uji dibersihkan manual.** Skrip uji membuat data (transfer, stok masuk, opname, cabang `ZT…`/`ZF…`, produk `UJI-…`) lalu dihapus lewat skrip pembersih; data yang Anda input sendiri (stok masuk dan transfer manual) tidak disentuh. Penghitung nomor dokumen hari pengujian ikut dibersihkan agar nomor dokumen Anda tidak melompat. Di Fase 9 tes memakai database terpisah sehingga tidak perlu lagi.
+10. **Data uji dibersihkan manual.** Skrip uji membuat data (transfer, stok masuk, opname, cabang `ZT…`/`ZF…`, produk `UJI-…`) lalu dihapus lewat skrip pembersih; data yang Anda input sendiri (stok masuk dan transfer manual) tidak disentuh. Penghitung nomor dokumen (`doc_counters`) dibangun ulang dari dokumen yang ada setelah tes, agar nomor dokumen Anda tidak melompat atau bentrok. **Catatan insiden:** pada pengujian Fase 6, pembersih versi lama menghapus penghitung `OP` hari itu sehingga opname Anda sendiri (OP-20261112-0001/0002) berisiko bentrok nomor; sudah dipulihkan (`OP 20261112` = 2) dan pembersih diperbaiki. Opname dan stok Anda tidak terhapus. Di Fase 9 tes memakai database terpisah sehingga tidak perlu lagi.
 11. **Cabang yang dinonaktifkan tidak bisa menerima kiriman langsung maupun request**, tetapi transfer yang sudah DISETUJUI/DIKIRIM ke cabang itu memblokir penonaktifan (409) sehingga tidak ada transfer yang menggantung.
 
-## 5. Langkah berikutnya: Fase 6 — Riwayat Pergerakan Stok
+## 5. Langkah berikutnya: Fase 7 — Dashboard
 
-Cakupan (INSTRUCTION.md bagian 12, aturan 4.7, API bagian 7, sitemap bagian 9):
+Cakupan (INSTRUCTION.md bagian 12, aturan 4.9, API bagian 7, sitemap bagian 9, dan catatan bagian 14):
 
-**Backend** (modul `movements`): `GET /movements` dari tabel `stock_movements` (append-only) dengan filter cabang (Owner/Admin Gudang saja; Pegawai Cabang selalu cabangnya sendiri), produk, tipe (`MASUK`, `TRANSFER_OUT`, `TRANSFER_IN`, `OPNAME`), rentang tanggal, dan paginasi. Kolom: waktu, cabang, produk, tipe, qty (+/−), saldo setelah, nomor dokumen referensi, user.
+**Backend** (modul `dashboard`): `GET /dashboard` (semua role, isi sesuai role).
 
-**Frontend:** `/riwayat` (menu "Riwayat Stok" sudah ada untuk semua role): tabel dengan filter di atas; nomor dokumen dapat diklik ke detail (`/stok-masuk/[id]`, `/transfer/[id]` atau `/request-stok`-nya untuk Pegawai Cabang, `/opname/[id]`).
+- **Owner/Admin Gudang** (seluruh cabang, filter cabang opsional): kartu total produk aktif, total cabang aktif, jumlah item stok menipis, request transfer menunggu (`DIAJUKAN`), transfer siap kirim (`DISETUJUI`), opname menunggu verifikasi; tabel stok menipis (cabang, produk, qty, minimum); grafik distribusi 30 hari terakhir (qty dikirim per cabang); 10 pergerakan stok terbaru.
+- **Pegawai Cabang** (cabangnya sendiri): kartu jumlah produk, item stok menipis, request saya yang masih berjalan (`DIAJUKAN`/`DISETUJUI`/`DIKIRIM`), kiriman yang perlu dikonfirmasi (`DIKIRIM`); daftar stok menipis; status opname terakhir; 10 pergerakan stok terbaru di cabangnya.
+- Stok bermasalah dibagi **Menipis** dan **Habis** (bagian 14), ditampilkan terpisah. Gudang utama ikut dihitung untuk Owner/Admin Gudang. Grafik memakai Recharts (belum terpasang; dipasang saat pertama dipakai).
 
-**Kriteria selesai:** filter dan paginasi berjalan, pegawai hanya melihat cabangnya.
+**Frontend:** `/dashboard` (saat ini placeholder) berisi kartu, tabel, grafik, dan daftar pergerakan terbaru per role.
+
+**Kriteria selesai:** angka di dashboard cocok dengan data di halaman terkait (stok, transfer, opname, riwayat).
 
 **Yang perlu ditanyakan sebelum mulai** (spec belum tegas):
 
-1. Tautan nomor dokumen: transfer untuk Pegawai Cabang tidak punya halaman `/transfer/[id]` di menunya (memakai `/request-stok`); apakah tautan cukup ke `/transfer/[id]` (halaman detail sudah bisa dibuka Pegawai Cabang untuk transfer cabangnya) atau perlu dibedakan per role?
-2. Urutan bawaan: terbaru dulu (waktu, lalu id)? Apakah perlu pilihan urutan?
-3. Filter produk: dropdown semua produk aktif, atau pencarian SKU/nama (produk nonaktif yang punya riwayat tetap harus bisa dipilih)?
-4. Rentang tanggal memakai zona WIB dan inklusif (seperti daftar lain); apakah bawaannya kosong (semua) atau mis. 30 hari terakhir?
-5. Ukuran halaman bawaan (20 seperti daftar lain) dan apakah perlu ekspor (spec tidak memintanya; saya anggap tidak).
-6. Tampilan tipe: label Indonesia (Stok masuk, Transfer keluar, Transfer masuk, Opname) dengan warna qty hijau/merah; sesuai?
+1. "Item stok menipis": dihitung per pasangan cabang × produk (tiap baris Menipis atau Habis dihitung satu), bukan per produk. Setuju? Apakah kartu dibagi dua ("Menipis" dan "Habis") sesuai catatan bagian 14, atau satu kartu dengan rincian?
+2. Filter cabang Owner/Admin Gudang: apakah ikut memengaruhi semua kartu, tabel, grafik, dan pergerakan terbaru (kecuali "total cabang aktif")? Bagaimana dengan "total produk aktif" yang tidak bergantung cabang?
+3. Grafik distribusi 30 hari: transfer berstatus `DIKIRIM` dan `DITERIMA` menurut `sent_at` (konsisten dengan Laporan Distribusi), qty dikirim, per cabang tujuan, batang per cabang (bukan per hari)? Apakah pengiriman langsung ikut dihitung?
+4. Tabel stok menipis: berapa baris maksimum di dashboard (usulan 10, urut paling kritis dulu: Habis lebih dulu, lalu selisih terhadap minimum) dan apakah perlu tautan "lihat semua" ke `/stok` yang terfilter?
+5. "Status opname terakhir" Pegawai Cabang: cukup satu opname terbaru (nomor, tanggal, status) dengan tautan ke detailnya?
+6. Tampilan kartu menjadi tautan ke halaman terkait (mis. kartu "Request menunggu" → `/transfer?status=DIAJUKAN`)? Halaman daftar saat ini belum membaca filter dari URL; menambahkannya sedikit di luar lingkup, jadi usulan saya kartu tanpa tautan kecuali Anda ingin sebaliknya.
+7. Pembaruan data: cukup dimuat saat halaman dibuka dan saat tab kembali fokus (bawaan TanStack Query), tanpa polling otomatis?

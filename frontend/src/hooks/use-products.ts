@@ -108,3 +108,23 @@ export function useAllActiveProducts() {
     },
   });
 }
+
+/**
+ * Semua produk (aktif dan nonaktif) untuk filter riwayat, karena riwayat produk nonaktif tetap
+ * dapat dilihat. Untuk Pegawai Cabang backend hanya mengembalikan produk aktif.
+ */
+export function useAllProducts() {
+  return useQuery({
+    queryKey: ["products", "all"],
+    queryFn: async () => {
+      const all: Product[] = [];
+      for (let page = 1; ; page++) {
+        const res = await api<Paginated<Product>>(
+          `/products${toQueryString({ page, pageSize: 100 })}`,
+        );
+        all.push(...res.data);
+        if (all.length >= res.meta.total || res.data.length === 0) return all;
+      }
+    },
+  });
+}

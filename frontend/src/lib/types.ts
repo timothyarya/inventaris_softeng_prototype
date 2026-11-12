@@ -200,3 +200,21 @@ export type OpnamePrefill = {
     qtySystem: number;
   }[];
 };
+
+export type MovementType = "MASUK" | "TRANSFER_OUT" | "TRANSFER_IN" | "OPNAME";
+export type MovementRefType = "STOCK_IN" | "TRANSFER" | "OPNAME";
+
+export type Movement = {
+  id: number;
+  createdAt: string;
+  branch: BranchRef;
+  product: { id: number; sku: string; name: string; unit: string; isActive: boolean };
+  type: MovementType;
+  /** Bertanda: positif menambah, negatif mengurangi. */
+  qty: number;
+  balanceAfter: number;
+  refType: MovementRefType;
+  refId: number;
+  refDocNo: string;
+  user: { id: number; name: string };
+};

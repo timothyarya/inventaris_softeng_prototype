@@ -48,6 +48,7 @@ export function useCreateStockIn() {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: ["stock-ins"] }),
         queryClient.invalidateQueries({ queryKey: ["stocks"] }),
+        queryClient.invalidateQueries({ queryKey: ["movements"] }),
         queryClient.invalidateQueries({ queryKey: ["branches"] }),
       ]),
   });

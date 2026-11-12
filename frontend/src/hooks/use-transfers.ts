@@ -49,6 +49,7 @@ function useInvalidateTransfers() {
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ["transfers"] }),
       queryClient.invalidateQueries({ queryKey: ["stocks"] }),
+      queryClient.invalidateQueries({ queryKey: ["movements"] }),
       queryClient.invalidateQueries({ queryKey: ["branches"] }),
     ]);
 }

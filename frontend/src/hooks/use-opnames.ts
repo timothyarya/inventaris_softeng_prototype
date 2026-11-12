@@ -64,6 +64,7 @@ function useInvalidateOpnames() {
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ["opnames"] }),
       queryClient.invalidateQueries({ queryKey: ["stocks"] }),
+      queryClient.invalidateQueries({ queryKey: ["movements"] }),
       queryClient.invalidateQueries({ queryKey: ["branches"] }),
     ]);
 }
