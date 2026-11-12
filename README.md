@@ -36,12 +36,15 @@ Edit `backend\.env`: ganti `PASSWORD_ANDA` (di `DATABASE_URL` dan `DATABASE_URL_
 
 Prisma 7 tidak menjalankan `generate` dan seed otomatis, jadi script npm di bawah menjalankannya secara eksplisit.
 
-| Perintah (dari root)  | Fungsi                                               |
-| --------------------- | ---------------------------------------------------- |
-| `npm run db:migrate`  | `prisma migrate dev` lalu `prisma generate`          |
-| `npm run db:seed`     | `prisma db seed` (idempotent)                        |
-| `npm run db:generate` | `prisma generate` saja                               |
-| `npm run db:reset`    | Hapus semua data, migrasi ulang, generate, lalu seed |
+| Perintah (dari root)                    | Fungsi                                                                      |
+| --------------------------------------- | --------------------------------------------------------------------------- |
+| `npm run db:migrate`                    | `prisma migrate dev` lalu `prisma generate`                                 |
+| `npm run db:seed`                       | `prisma db seed` (idempotent)                                               |
+| `npm run db:generate`                   | `prisma generate` saja                                                      |
+| `npm run db:reset`                      | Hapus semua data, migrasi ulang, generate, lalu seed                        |
+| `npm run db:deploy --workspace backend` | `prisma migrate deploy` lalu `prisma generate` (tanpa membuat migrasi baru) |
+
+> **Peringatan:** `db:reset` menghapus **semua** data database yang ada di `DATABASE_URL` (stok masuk, transfer, opname, dst.), lalu mengisi ulang dengan seed. Jangan dijalankan bila ada data yang ingin dipertahankan.
 
 Pertama kali:
 
@@ -78,7 +81,37 @@ npm run lint
 npm run typecheck
 npm run format         # Prettier
 npm run format:check
+npm test               # tes integrasi backend (lihat bagian Pengujian)
 ```
+
+## Pengujian
+
+Tes integrasi backend memakai Vitest dan Supertest terhadap database **terpisah** (`DATABASE_URL_TEST`, bawaan `softeng_inventaris_test`):
+
+```powershell
+npm test
+```
+
+Setiap kali dijalankan, tes mengosongkan database tes, memigrasinya (`prisma migrate deploy`), mengisinya dengan seed, lalu menjalankan skenario. Database development (`DATABASE_URL`) tidak pernah disentuh: proses tes menolak berjalan bila `DATABASE_URL_TEST` kosong, sama dengan `DATABASE_URL`, atau nama databasenya tidak berakhiran `_test`. Karena semua file tes berbagi satu database, file dijalankan berurutan.
+
+Tes mencakup 15 skenario uji wajib (INSTRUCTION.md bagian 12, Fase 9) di `backend/tests/stock-flow.test.ts`, `lifecycle.test.ts`, dan `doc-numbers.test.ts`, serta kriteria laporan dan akses di `reports.test.ts`. Tes browser (UI) tidak termasuk di repo.
+
+## Fitur per halaman
+
+| Area               | Halaman (role)                                                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Dashboard          | `/dashboard` (semua role; isi berbeda untuk Owner/Admin Gudang dan Pegawai Cabang)                               |
+| Data master        | `/produk`, `/kategori` (Owner, Admin Gudang); `/cabang`, `/users` (Owner)                                        |
+| Stok               | `/stok` (Owner, Admin Gudang); `/inventaris` (Pegawai Cabang); `/stok-masuk` (Owner, Admin Gudang)               |
+| Transfer           | `/transfer`, `/transfer/kirim` (Owner, Admin Gudang); `/request-stok` (Pegawai Cabang); `/transfer/[id]` (semua) |
+| Opname dan riwayat | `/opname`, `/riwayat` (semua role; Pegawai Cabang hanya cabangnya)                                               |
+| Laporan            | `/laporan/stok`, `/laporan/distribusi` (Owner, Admin Gudang)                                                     |
+
+Daftar endpoint ada di INSTRUCTION.md bagian 7; keputusan implementasi per fase ada di bagian 14. Status pengerjaan, keputusan, dan masalah yang belum selesai dicatat di [`PROGRESS.md`](./PROGRESS.md).
+
+## Catatan dependensi
+
+`npm audit` melaporkan kerentanan tingkat low/moderate, seluruhnya pada alat pengembangan (`typescript-eslint` → `minimatch`, dan CLI `shadcn` → `deepmerge`/`ts-morph`), bukan pada kode yang berjalan di server. Perbaikannya memerlukan perubahan versi mayor (`npm audit fix --force`), sehingga belum diterapkan. `npm install` juga mencetak peringatan bahwa ESLint 9 tidak lagi didukung; belum ditingkatkan.
 
 ## Autentikasi (Fase 1)
 

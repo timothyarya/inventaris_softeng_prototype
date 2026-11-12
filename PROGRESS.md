@@ -16,8 +16,8 @@ _Terakhir diperbarui: 2026-11-13._
 | 5    | Stok opname                                  | **Selesai** | `80e6403`          |
 | 6    | Riwayat pergerakan stok                      | **Selesai** | `c624a27`          |
 | 7    | Dashboard                                    | **Selesai** | `5df1082`          |
-| 8    | Laporan (stok dan distribusi)                | **Selesai** | commit "Fase 8: …" |
-| 9    | Pengujian dan rapikan                        | Belum       | —                  |
+| 8    | Laporan (stok dan distribusi)                | **Selesai** | `60c6c54`          |
+| 9    | Pengujian dan rapikan                        | **Selesai** | commit "Fase 9: …" |
 
 ### Yang sudah ada
 
@@ -103,6 +103,8 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 
 - **Fase 8:** modul backend `reports`: `GET /reports/stock` dan `GET /reports/distribution` (Owner/Admin Gudang; hanya baca; periode wajib); Laporan Stok per cabang × produk dihitung dari buku besar (stok awal, masuk, transfer masuk/keluar, opname, stok akhir, status menurut stok akhir); Laporan Distribusi per cabang tujuan (request dan pengiriman langsung sebagai baris terpisah, rincian per produk, selisih kirim) plus rekap status pengajuan; frontend `/laporan/stok` dan `/laporan/distribusi`.
 
+- **Fase 9:** tes integrasi backend (Vitest + Supertest, `npm test`, 18 tes) pada database tes terpisah yang direset otomatis; 15 skenario uji wajib, kriteria laporan, dan akses; README dilengkapi.
+
 - Kirim yang kekurangan stok ditolak utuh dengan 422 yang menyebut semua item yang kurang; nomor dokumen dan stok tidak berubah.
 - Detail transfer memuat `warehouseStock` hanya untuk Owner/Admin Gudang pada status DIAJUKAN/DISETUJUI; `shortfall` bernilai null sebelum diterima.
 
@@ -134,6 +136,14 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 - **Penafsiran "baris terpisah Pengiriman langsung":** satu baris per cabang tujuan berlabel "Pengiriman langsung" (bukan satu baris gabungan semua cabang), agar tujuan pengiriman langsung tidak hilang dari rekap. Semua baris request tampil dulu, baru pengiriman langsung.
 - Kriteria Fase 8 teruji terhadap seluruh database: stok akhir laporan untuk periode yang berakhir hari ini sama dengan `branch_stocks.qty` untuk setiap pasangan, termasuk data Anda sendiri.
 
+### Keputusan implementasi Fase 9 (lengkapnya di bagian 14 INSTRUCTION.md)
+
+- Dari jawaban Anda: tes memakai `softeng_inventaris_test` yang sudah ada (direset dan dimigrasi otomatis setiap `npm test`); hanya tes backend di repo (tanpa Playwright); `db:reset` diuji **hanya terhadap database tes**; `npm audit` hanya dicatat.
+- Pengaman: tes menolak berjalan bila `DATABASE_URL_TEST` kosong, sama dengan `DATABASE_URL`, atau namanya tidak berakhiran `_test`; `DATABASE_URL` proses tes ditimpa dengan URL tes. Setelah semua tes dan `db:reset` dijalankan, database development Anda tetap utuh (2 opname, 2 transfer, 3 stok masuk, 26 pergerakan, 5 user).
+- Prisma meminta persetujuan eksplisit untuk `migrate reset` dari agen AI; untuk uji `db:reset` saya memakai jawaban Anda ("Uji pada database tes saja") sebagai persetujuan, hanya untuk database tes.
+- `cross-env` tidak dipakai (global setup mengatur environment langsung dari Node dan membaca `.env`).
+- Bagian 13 (di luar lingkup) tidak disentuh: tidak ada fitur baru, hanya tes, README, dan skrip `test`.
+
 ### Penggantian nama role (setelah Fase 4)
 
 - SuperAdmin → **Admin Gudang**, Pegawai → **Pegawai Cabang** (Owner tetap); hak akses sama. Nilai enum di database dan API ikut diganti (`ADMIN_GUDANG`, `PEGAWAI_CABANG`) lewat migrasi `rename_roles`; setelah `git pull` jalankan `npm run db:deploy --workspace backend` (atau `npm run db:migrate`).
@@ -158,10 +168,10 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 
 ## 4. Masalah yang belum selesai
 
-1. **`npm run db:reset` belum teruji.** Prisma memblokir `migrate reset` dari agen AI tanpa persetujuan eksplisit pemilik proyek. Script sudah diperbaiki (`prisma migrate reset --force && prisma generate && prisma db seed`), tetapi perlu dijalankan sendiri sekali. Perintah itu menghapus semua data database development.
-2. **Skrip uji tidak masuk repo.** Pengujian Fase 1 (46 cek HTTP, 14 cek `requireRole`/scoping, 62 cek browser) Fase 2 (153 cek API, 56 cek browser), Fase 3 (82 cek API, 21 cek langsung ke `stockService`/`generateDocNo`, 50 cek browser), dan Fase 4 (142 cek API termasuk konkurensi, 71 cek browser), Fase 5 (105 cek API termasuk konkurensi dan matriks persetujuan, 60 cek browser termasuk layar 390px), Fase 6 (56 cek API termasuk batas hari WIB dan integritas saldo, 29 cek browser), dan Fase 7 (55 cek API termasuk pencocokan angka dengan `/stocks` dan batas 30 hari WIB, 57 cek browser termasuk filter cabang, tiga role, layar 390px, dan mode gelap), dan Fase 8 (60 cek API termasuk batas hari WIB pada stok awal, `sent_at`, dan `requested_at` serta kecocokan stok akhir dengan `branch_stocks`, 33 cek browser termasuk layar 390px) dijalankan lewat skrip sementara di folder scratchpad dan tidak di-commit. Tes otomatis di repo baru dibuat di Fase 9 (Vitest + Supertest).
-3. **Database tes belum dipakai.** `softeng_inventaris_test` sudah dibuat tetapi belum dimigrasi. Ingat: URL migrasi Prisma 7 dibaca dari `prisma.config.ts`, jadi untuk tes perlu `DATABASE_URL` yang di-set lewat `cross-env` (lihat Fase 9).
-4. **`npm audit`** melaporkan beberapa kerentanan tingkat moderate (7 saat Fase 0) dan ESLint 9.39.5 memberi peringatan "no longer supported". Belum ditinjau.
+1. **`npm run db:reset` teruji hanya pada database tes (Fase 9).** Script (`prisma migrate reset --force && prisma generate && prisma db seed`) berhasil dijalankan terhadap `softeng_inventaris_test` atas persetujuan Anda. Terhadap database development tidak dijalankan karena menghapus semua data Anda; jalankan sendiri bila perlu.
+2. **Skrip uji sementara (API dan browser) tidak masuk repo.** Skenario wajib kini ada sebagai tes otomatis (Fase 9); skrip berikut hanya pelengkap manual: Pengujian Fase 1 (46 cek HTTP, 14 cek `requireRole`/scoping, 62 cek browser) Fase 2 (153 cek API, 56 cek browser), Fase 3 (82 cek API, 21 cek langsung ke `stockService`/`generateDocNo`, 50 cek browser), dan Fase 4 (142 cek API termasuk konkurensi, 71 cek browser), Fase 5 (105 cek API termasuk konkurensi dan matriks persetujuan, 60 cek browser termasuk layar 390px), Fase 6 (56 cek API termasuk batas hari WIB dan integritas saldo, 29 cek browser), dan Fase 7 (55 cek API termasuk pencocokan angka dengan `/stocks` dan batas 30 hari WIB, 57 cek browser termasuk filter cabang, tiga role, layar 390px, dan mode gelap), dan Fase 8 (60 cek API termasuk batas hari WIB pada stok awal, `sent_at`, dan `requested_at` serta kecocokan stok akhir dengan `branch_stocks`, 33 cek browser termasuk layar 390px) dijalankan lewat skrip sementara di folder scratchpad dan tidak di-commit. Tes otomatis di repo (Fase 9) hanya mencakup backend; pengujian UI tetap manual.
+3. **Database tes dipakai oleh `npm test` (Fase 9).** `softeng_inventaris_test` dikosongkan, dimigrasi, dan di-seed otomatis setiap tes dijalankan; jangan menyimpan data penting di sana.
+4. **`npm audit`** (ditinjau di Fase 9): 12 temuan (2 low, 10 moderate), seluruhnya pada alat pengembangan (`typescript-eslint` → `minimatch`, CLI `shadcn` → `deepmerge`/`ts-morph`); perbaikannya perubahan versi mayor sehingga hanya dicatat. ESLint 9 masih memberi peringatan "no longer supported" saat `npm install`.
 5. **Keterbatasan yang disengaja (spec tidak memintanya):**
    - Logout tidak mencabut token JWT; token tetap valid sampai kedaluwarsa. Akun nonaktif tetap ditolak lewat pemuatan ulang user.
    - Tidak ada pembatasan percobaan login.
@@ -169,21 +179,15 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 7. **Folder kosong dari struktur spec** (`modules/*` selain `auth`, `services/`) belum ada di git. Dibuat saat dipakai.
 8. **Cabang baru tanpa stok:** semua produk aktifnya berstatus Habis (qty 0) sampai ada transfer yang diterima. Wajar.
 9. **Skenario uji 9 (nonaktif cabang dengan transfer DISETUJUI/DIKIRIM)** kini diuji di Fase 4 lewat transfer sungguhan di level API (ditolak 409; DIAJUKAN otomatis dibatalkan setelah transfer selesai). Belum ada pengujian lewat klik di UI untuk skenario ini.
-10. **Data uji dibersihkan manual.** Skrip uji membuat data (transfer, stok masuk, opname, cabang `ZT…`/`ZF…`/`ZG…`/`ZH…`/`ZJ…`/`ZK…`, produk `UJI-…`) lalu dihapus lewat skrip pembersih; data yang Anda input sendiri (stok masuk dan transfer manual) tidak disentuh. Penghitung nomor dokumen (`doc_counters`) dibangun ulang dari dokumen yang ada setelah tes, agar nomor dokumen Anda tidak melompat atau bentrok. **Catatan insiden:** pada pengujian Fase 6, pembersih versi lama menghapus penghitung `OP` hari itu sehingga opname Anda sendiri (OP-20261112-0001/0002) berisiko bentrok nomor; sudah dipulihkan (`OP 20261112` = 2) dan pembersih diperbaiki. Opname dan stok Anda tidak terhapus. Di Fase 9 tes memakai database terpisah sehingga tidak perlu lagi.
+10. **Data uji dibersihkan manual.** Skrip uji membuat data (transfer, stok masuk, opname, cabang `ZT…`/`ZF…`/`ZG…`/`ZH…`/`ZJ…`/`ZK…`, produk `UJI-…`) lalu dihapus lewat skrip pembersih; data yang Anda input sendiri (stok masuk dan transfer manual) tidak disentuh. Penghitung nomor dokumen (`doc_counters`) dibangun ulang dari dokumen yang ada setelah tes, agar nomor dokumen Anda tidak melompat atau bentrok. **Catatan insiden:** pada pengujian Fase 6, pembersih versi lama menghapus penghitung `OP` hari itu sehingga opname Anda sendiri (OP-20261112-0001/0002) berisiko bentrok nomor; sudah dipulihkan (`OP 20261112` = 2) dan pembersih diperbaiki. Opname dan stok Anda tidak terhapus. Tes otomatis Fase 9 memakai database terpisah sehingga tidak menyentuh data Anda.
 11. **Cabang yang dinonaktifkan tidak bisa menerima kiriman langsung maupun request**, tetapi transfer yang sudah DISETUJUI/DIKIRIM ke cabang itu memblokir penonaktifan (409) sehingga tidak ada transfer yang menggantung.
 
-## 5. Langkah berikutnya: Fase 9 — Pengujian dan rapikan
+## 5. Langkah berikutnya
 
-Cakupan (INSTRUCTION.md bagian 12, skenario uji wajib 1–15, dan bagian 6.3/langkah README):
+Semua fase di INSTRUCTION.md bagian 12 (0–9) sudah selesai. Tidak ada fase yang tersisa. Yang bisa dipertimbangkan (semuanya di luar lingkup saat ini, bagian 13, jadi perlu persetujuan Anda dulu):
 
-- **Tes integrasi backend** (Vitest + Supertest) memakai database PostgreSQL terpisah (`DATABASE_URL_TEST`; `softeng_inventaris_test` sudah dibuat tetapi belum dimigrasi). Database tes di-reset dan di-migrate sebelum tes berjalan; di Prisma 7 URL migrasi dibaca dari `prisma.config.ts`, jadi perintah migrasi tes memakai `DATABASE_URL_TEST` lewat `cross-env`.
-- **15 skenario uji wajib** (stok masuk, alur transfer penuh termasuk selisih kirim di laporan, kirim melebihi stok 422, kirim bersamaan, scoping cabang, opname, nonaktif cabang/gudang/user, hapus produk bermovement, `branchId` palsu, constraint `is_main`, nomor dokumen bersamaan). Sebagian besar sudah teruji lewat skrip sementara (Fase 3–8) dan tinggal dipindahkan menjadi tes otomatis di repo.
-- **README.md** di root: instalasi dependensi, pembuatan database, urutan perintah database (`db:migrate` → `db:generate` → `db:seed`), cara menjalankan kedua aplikasi, akun seed.
-- **Merapikan:** tinjau `npm audit` dan peringatan ESLint (bagian 4 no. 4), uji `npm run db:reset` bersama pemilik proyek (bagian 4 no. 1), tambahkan script `build`/`start` backend bila diperlukan.
-
-**Yang perlu ditanyakan sebelum mulai** (spec belum tegas):
-
-1. Tes memakai database `softeng_inventaris_test` yang sudah ada (di-reset otomatis sebelum tes) — setuju? Tes tidak boleh menyentuh database development Anda.
-2. Skrip uji sementara (API dan browser) yang selama ini saya jalankan: dipindahkan ke repo hanya dalam bentuk Vitest backend (spec meminta tes backend saja), atau tes browser (Playwright) juga ikut ditambahkan? Tes browser di luar spec, jadi usulan saya tidak.
-3. `npm run db:reset` akan menghapus seluruh data development Anda (stok masuk, transfer, opname). Apakah Anda ingin saya mencobanya (Prisma meminta persetujuan eksplisit Anda), atau Anda jalankan sendiri, atau dilewati?
-4. Bagaimana menangani `npm audit` (kerentanan moderate) — dicatat saja di README, atau diperbarui bila ada perbaikan non-breaking?
+- Ekspor laporan (CSV/Excel/PDF), notifikasi, stok keluar karena penjualan/pemakaian, tabel supplier terstruktur, harga/nilai stok (daftar lengkap di bagian 13).
+- Tes browser (Playwright) di repo, bila ingin pengujian UI otomatis.
+- Menaikkan versi alat pengembangan untuk menutup temuan `npm audit` dan peringatan ESLint (perubahan versi mayor).
+- Menjalankan `npm run db:reset` sendiri pada database development bila ingin memulai dari data seed.
+- Langkah produksi (build backend, variabel environment, penyimpanan JWT_SECRET) belum dibahas di spec.
