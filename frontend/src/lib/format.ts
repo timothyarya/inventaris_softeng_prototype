@@ -35,3 +35,8 @@ export function formatDate(date: string): string {
     new Date(`${date}T00:00:00Z`),
   );
 }
+
+/** Tanggal pertama bulan berjalan (YYYY-MM-DD) di zona Asia/Jakarta. */
+export function firstOfMonthJakarta(): string {
+  return `${todayJakarta().slice(0, 8)}01`;
+}

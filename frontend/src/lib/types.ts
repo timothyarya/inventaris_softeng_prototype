@@ -271,3 +271,59 @@ export type DashboardPegawai = {
 };
 
 export type Dashboard = DashboardAdmin | DashboardPegawai;
+
+export type StockReportRow = {
+  branch: BranchRef;
+  product: {
+    id: number;
+    sku: string;
+    name: string;
+    unit: string;
+    minStock: number;
+    isActive: boolean;
+  };
+  opening: number;
+  masuk: number;
+  /** Bertanda: transfer keluar dan opname kurang bernilai negatif. */
+  transferIn: number;
+  transferOut: number;
+  opname: number;
+  closing: number;
+  /** Menurut stok akhir periode. */
+  status: StockStatus;
+};
+
+export type StockReport = {
+  from: string;
+  to: string;
+  branch: BranchRef | null;
+  summary: { rowCount: number; lowStock: number; outOfStock: number };
+  rows: StockReportRow[];
+};
+
+export type DistributionRow = {
+  branch: BranchRef;
+  origin: TransferOrigin;
+  transferCount: number;
+  receivedCount: number;
+  qtySent: number;
+  qtyReceived: number;
+  /** Hanya dari transfer berstatus DITERIMA. */
+  shortfall: number;
+  items: {
+    product: { id: number; sku: string; name: string; unit: string };
+    qtySent: number;
+    qtyReceived: number;
+    shortfall: number;
+  }[];
+};
+
+export type DistributionReport = {
+  from: string;
+  to: string;
+  branch: BranchRef | null;
+  totals: { transferCount: number; qtySent: number; qtyReceived: number; shortfall: number };
+  rows: DistributionRow[];
+  requestStatus: { status: TransferStatus; count: number }[];
+  requestTotal: number;
+};

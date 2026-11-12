@@ -15,8 +15,9 @@ _Terakhir diperbarui: 2026-11-13._
 | 4    | Transfer stok                                | **Selesai** | `9cd6ed1`          |
 | 5    | Stok opname                                  | **Selesai** | `80e6403`          |
 | 6    | Riwayat pergerakan stok                      | **Selesai** | `c624a27`          |
-| 7    | Dashboard                                    | **Selesai** | commit "Fase 7: …" |
-| 8–9  | Laporan → pengujian                          | Belum       | —                  |
+| 7    | Dashboard                                    | **Selesai** | `5df1082`          |
+| 8    | Laporan (stok dan distribusi)                | **Selesai** | commit "Fase 8: …" |
+| 9    | Pengujian dan rapikan                        | Belum       | —                  |
 
 ### Yang sudah ada
 
@@ -100,6 +101,8 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 - Yang menolak dicatat di `approved_by/approved_at` (tidak ada kolom terpisah); membatalkan tidak meminta alasan.
 - **Fase 7:** modul backend `dashboard`: `GET /dashboard` (semua role; bentuk respons menurut role, Owner/Admin Gudang dapat memfilter `branchId`); hitungan Menipis/Habis memakai kondisi SQL yang dipakai bersama `/stocks` (`stocks/statusSql.ts`); frontend `/dashboard` berisi kartu (Menipis dan Habis terpisah), tabel stok bermasalah, grafik batang distribusi 30 hari (Recharts), dan 10 pergerakan terbaru; Pegawai Cabang juga melihat kartu opname terakhir.
 
+- **Fase 8:** modul backend `reports`: `GET /reports/stock` dan `GET /reports/distribution` (Owner/Admin Gudang; hanya baca; periode wajib); Laporan Stok per cabang × produk dihitung dari buku besar (stok awal, masuk, transfer masuk/keluar, opname, stok akhir, status menurut stok akhir); Laporan Distribusi per cabang tujuan (request dan pengiriman langsung sebagai baris terpisah, rincian per produk, selisih kirim) plus rekap status pengajuan; frontend `/laporan/stok` dan `/laporan/distribusi`.
+
 - Kirim yang kekurangan stok ditolak utuh dengan 422 yang menyebut semua item yang kurang; nomor dokumen dan stok tidak berubah.
 - Detail transfer memuat `warehouseStock` hanya untuk Owner/Admin Gudang pada status DIAJUKAN/DISETUJUI; `shortfall` bernilai null sebelum diterima.
 
@@ -123,6 +126,13 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 - Tanpa tanya (default saya): tabel stok bermasalah maksimal 10 baris (Habis dulu, lalu kekurangan terbesar) dengan tautan "Lihat semua stok"; opname terakhir Pegawai Cabang satu saja dengan tautan ke detailnya; tanpa polling (data segar saat dibuka dan saat tab kembali fokus); "jumlah produk" Pegawai Cabang = jumlah produk aktif.
 - Recharts dipasang (3.10.1, versi dikunci). Warna batang satu seri (biru) divalidasi dengan skrip palet; grafik punya tooltip, label aksesibilitas, dan tombol "Lihat tabel".
 - Refaktor kecil: kondisi SQL status stok dipindah ke `stocks/statusSql.ts` agar dipakai bersama `/stocks` dan dashboard; `movements/service.ts` mengekspor `toMovementDto`; `movement-list.tsx` mengekspor label/kelas tipe dan `docHref`; `stock-list.tsx` mengekspor `StockLevelBadge`.
+
+### Keputusan implementasi Fase 8 (lengkapnya di bagian 14 INSTRUCTION.md)
+
+- Dari jawaban Anda: Laporan Stok hanya menampilkan pasangan yang punya stok awal atau pergerakan dalam periode (produk dan cabang nonaktif tetap tampil, gudang utama ikut di "seluruh cabang"); Menipis dan Habis ditandai terpisah menurut **stok akhir periode**; periode wajib terisi dengan bawaan 1 bulan berjalan sampai hari ini; Laporan Distribusi berupa rekap per cabang tujuan dengan rincian per produk yang dapat dibuka/tutup, selisih kirim hanya dari transfer DITERIMA.
+- Tanpa tanya (default saya): semua baris dikembalikan sekaligus (tanpa paginasi, supaya mudah diekspor nanti); tidak ada baris total pada Laporan Stok (satuan produk berbeda-beda); rekap status pengajuan ikut filter cabang tujuan dan memakai `requested_at`, dengan **enam** status (DIKIRIM dan DITERIMA ikut karena request yang sudah berjalan dikelompokkan menurut status saat ini).
+- **Penafsiran "baris terpisah Pengiriman langsung":** satu baris per cabang tujuan berlabel "Pengiriman langsung" (bukan satu baris gabungan semua cabang), agar tujuan pengiriman langsung tidak hilang dari rekap. Semua baris request tampil dulu, baru pengiriman langsung.
+- Kriteria Fase 8 teruji terhadap seluruh database: stok akhir laporan untuk periode yang berakhir hari ini sama dengan `branch_stocks.qty` untuk setiap pasangan, termasuk data Anda sendiri.
 
 ### Penggantian nama role (setelah Fase 4)
 
@@ -149,38 +159,31 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 ## 4. Masalah yang belum selesai
 
 1. **`npm run db:reset` belum teruji.** Prisma memblokir `migrate reset` dari agen AI tanpa persetujuan eksplisit pemilik proyek. Script sudah diperbaiki (`prisma migrate reset --force && prisma generate && prisma db seed`), tetapi perlu dijalankan sendiri sekali. Perintah itu menghapus semua data database development.
-2. **Skrip uji tidak masuk repo.** Pengujian Fase 1 (46 cek HTTP, 14 cek `requireRole`/scoping, 62 cek browser) Fase 2 (153 cek API, 56 cek browser), Fase 3 (82 cek API, 21 cek langsung ke `stockService`/`generateDocNo`, 50 cek browser), dan Fase 4 (142 cek API termasuk konkurensi, 71 cek browser), Fase 5 (105 cek API termasuk konkurensi dan matriks persetujuan, 60 cek browser termasuk layar 390px), Fase 6 (56 cek API termasuk batas hari WIB dan integritas saldo, 29 cek browser), dan Fase 7 (55 cek API termasuk pencocokan angka dengan `/stocks` dan batas 30 hari WIB, 57 cek browser termasuk filter cabang, tiga role, layar 390px, dan mode gelap) dijalankan lewat skrip sementara di folder scratchpad dan tidak di-commit. Tes otomatis di repo baru dibuat di Fase 9 (Vitest + Supertest).
+2. **Skrip uji tidak masuk repo.** Pengujian Fase 1 (46 cek HTTP, 14 cek `requireRole`/scoping, 62 cek browser) Fase 2 (153 cek API, 56 cek browser), Fase 3 (82 cek API, 21 cek langsung ke `stockService`/`generateDocNo`, 50 cek browser), dan Fase 4 (142 cek API termasuk konkurensi, 71 cek browser), Fase 5 (105 cek API termasuk konkurensi dan matriks persetujuan, 60 cek browser termasuk layar 390px), Fase 6 (56 cek API termasuk batas hari WIB dan integritas saldo, 29 cek browser), dan Fase 7 (55 cek API termasuk pencocokan angka dengan `/stocks` dan batas 30 hari WIB, 57 cek browser termasuk filter cabang, tiga role, layar 390px, dan mode gelap), dan Fase 8 (60 cek API termasuk batas hari WIB pada stok awal, `sent_at`, dan `requested_at` serta kecocokan stok akhir dengan `branch_stocks`, 33 cek browser termasuk layar 390px) dijalankan lewat skrip sementara di folder scratchpad dan tidak di-commit. Tes otomatis di repo baru dibuat di Fase 9 (Vitest + Supertest).
 3. **Database tes belum dipakai.** `softeng_inventaris_test` sudah dibuat tetapi belum dimigrasi. Ingat: URL migrasi Prisma 7 dibaca dari `prisma.config.ts`, jadi untuk tes perlu `DATABASE_URL` yang di-set lewat `cross-env` (lihat Fase 9).
 4. **`npm audit`** melaporkan beberapa kerentanan tingkat moderate (7 saat Fase 0) dan ESLint 9.39.5 memberi peringatan "no longer supported". Belum ditinjau.
 5. **Keterbatasan yang disengaja (spec tidak memintanya):**
    - Logout tidak mencabut token JWT; token tetap valid sampai kedaluwarsa. Akun nonaktif tetap ditolak lewat pemuatan ulang user.
    - Tidak ada pembatasan percobaan login.
-6. **Sebagian halaman di sidebar belum ada.** Produk, Kategori, Cabang, User (Fase 2), Stok Cabang, Inventaris, Stok Masuk (Fase 3), Transfer, Request Stok (Fase 4), dan Stok Opname (Fase 5), Riwayat Stok (Fase 6), dan Dashboard (Fase 7) sudah ada. Laporan masih menampilkan "Halaman tidak ditemukan" di dalam layout sampai fasenya dikerjakan.
+6. **Semua halaman di sidebar sudah ada (Fase 8).** Produk, Kategori, Cabang, User (Fase 2), Stok Cabang, Inventaris, Stok Masuk (Fase 3), Transfer, Request Stok (Fase 4), dan Stok Opname (Fase 5), Riwayat Stok (Fase 6), Dashboard (Fase 7), dan Laporan Stok/Distribusi (Fase 8) sudah dibuat.
 7. **Folder kosong dari struktur spec** (`modules/*` selain `auth`, `services/`) belum ada di git. Dibuat saat dipakai.
 8. **Cabang baru tanpa stok:** semua produk aktifnya berstatus Habis (qty 0) sampai ada transfer yang diterima. Wajar.
 9. **Skenario uji 9 (nonaktif cabang dengan transfer DISETUJUI/DIKIRIM)** kini diuji di Fase 4 lewat transfer sungguhan di level API (ditolak 409; DIAJUKAN otomatis dibatalkan setelah transfer selesai). Belum ada pengujian lewat klik di UI untuk skenario ini.
-10. **Data uji dibersihkan manual.** Skrip uji membuat data (transfer, stok masuk, opname, cabang `ZT…`/`ZF…`, produk `UJI-…`) lalu dihapus lewat skrip pembersih; data yang Anda input sendiri (stok masuk dan transfer manual) tidak disentuh. Penghitung nomor dokumen (`doc_counters`) dibangun ulang dari dokumen yang ada setelah tes, agar nomor dokumen Anda tidak melompat atau bentrok. **Catatan insiden:** pada pengujian Fase 6, pembersih versi lama menghapus penghitung `OP` hari itu sehingga opname Anda sendiri (OP-20261112-0001/0002) berisiko bentrok nomor; sudah dipulihkan (`OP 20261112` = 2) dan pembersih diperbaiki. Opname dan stok Anda tidak terhapus. Di Fase 9 tes memakai database terpisah sehingga tidak perlu lagi.
+10. **Data uji dibersihkan manual.** Skrip uji membuat data (transfer, stok masuk, opname, cabang `ZT…`/`ZF…`/`ZG…`/`ZH…`/`ZJ…`/`ZK…`, produk `UJI-…`) lalu dihapus lewat skrip pembersih; data yang Anda input sendiri (stok masuk dan transfer manual) tidak disentuh. Penghitung nomor dokumen (`doc_counters`) dibangun ulang dari dokumen yang ada setelah tes, agar nomor dokumen Anda tidak melompat atau bentrok. **Catatan insiden:** pada pengujian Fase 6, pembersih versi lama menghapus penghitung `OP` hari itu sehingga opname Anda sendiri (OP-20261112-0001/0002) berisiko bentrok nomor; sudah dipulihkan (`OP 20261112` = 2) dan pembersih diperbaiki. Opname dan stok Anda tidak terhapus. Di Fase 9 tes memakai database terpisah sehingga tidak perlu lagi.
 11. **Cabang yang dinonaktifkan tidak bisa menerima kiriman langsung maupun request**, tetapi transfer yang sudah DISETUJUI/DIKIRIM ke cabang itu memblokir penonaktifan (409) sehingga tidak ada transfer yang menggantung.
 
-## 5. Langkah berikutnya: Fase 8 — Laporan
+## 5. Langkah berikutnya: Fase 9 — Pengujian dan rapikan
 
-Cakupan (INSTRUCTION.md bagian 12, aturan 4.8, API bagian 7, sitemap bagian 9, dan catatan bagian 14):
+Cakupan (INSTRUCTION.md bagian 12, skenario uji wajib 1–15, dan bagian 6.3/langkah README):
 
-**Backend** (modul `reports`): `GET /reports/stock` dan `GET /reports/distribution` (Owner dan Admin Gudang; parameter `branchId?`, `from`, `to`).
-
-- **Laporan Stok** per cabang × produk dalam periode: stok awal (jumlah movement sebelum tanggal mulai), Masuk, Transfer masuk, Transfer keluar, Penyesuaian opname (+/−), stok akhir = stok awal + semua pergerakan periode; tandai yang stok akhirnya di bawah minimum.
-- **Laporan Distribusi** (transfer `DIKIRIM`/`DITERIMA` dengan `sent_at` dalam periode): rekap per cabang tujuan (jumlah transfer, total qty dikirim, total qty diterima, total selisih kirim), rincian per produk, rekap status pengajuan (DIAJUKAN/DISETUJUI/DITOLAK/DIBATALKAN; hanya transfer dari request, menurut `requested_at`, status saat ini); pengiriman langsung sebagai baris terpisah "Pengiriman langsung".
-- Ekspor CSV/PDF **belum** (bagian 13).
-
-**Frontend:** `/laporan/stok` dan `/laporan/distribusi` (menu Laporan sudah ada di sidebar) dengan filter cabang dan periode.
-
-**Kriteria selesai:** untuk setiap cabang × produk, stok awal + pergerakan = stok akhir, dan stok akhir periode yang berjalan sampai hari ini = `branch_stocks.qty`.
+- **Tes integrasi backend** (Vitest + Supertest) memakai database PostgreSQL terpisah (`DATABASE_URL_TEST`; `softeng_inventaris_test` sudah dibuat tetapi belum dimigrasi). Database tes di-reset dan di-migrate sebelum tes berjalan; di Prisma 7 URL migrasi dibaca dari `prisma.config.ts`, jadi perintah migrasi tes memakai `DATABASE_URL_TEST` lewat `cross-env`.
+- **15 skenario uji wajib** (stok masuk, alur transfer penuh termasuk selisih kirim di laporan, kirim melebihi stok 422, kirim bersamaan, scoping cabang, opname, nonaktif cabang/gudang/user, hapus produk bermovement, `branchId` palsu, constraint `is_main`, nomor dokumen bersamaan). Sebagian besar sudah teruji lewat skrip sementara (Fase 3–8) dan tinggal dipindahkan menjadi tes otomatis di repo.
+- **README.md** di root: instalasi dependensi, pembuatan database, urutan perintah database (`db:migrate` → `db:generate` → `db:seed`), cara menjalankan kedua aplikasi, akun seed.
+- **Merapikan:** tinjau `npm audit` dan peringatan ESLint (bagian 4 no. 4), uji `npm run db:reset` bersama pemilik proyek (bagian 4 no. 1), tambahkan script `build`/`start` backend bila diperlukan.
 
 **Yang perlu ditanyakan sebelum mulai** (spec belum tegas):
 
-1. Cakupan baris Laporan Stok: semua pasangan cabang × produk aktif (termasuk yang tanpa pergerakan, qty 0) atau hanya yang punya stok awal/pergerakan? Produk nonaktif yang masih punya stok/pergerakan ikut tampil? Gudang utama ikut dalam "seluruh cabang"?
-2. Bila periode berakhir sebelum hari ini, "tandai di bawah minimum" menurut stok akhir periode itu (bukan stok sekarang) — setuju? Apakah Habis dan Menipis ditandai terpisah (sesuai catatan bagian 14)?
-3. Periode bawaan dan batasnya: wajib diisi atau bawaan (mis. bulan berjalan)? Batas hari WIB inklusif seperti `/riwayat`?
-4. Bentuk tampilan: tabel paginasi per halaman atau semua baris sekaligus? Total per cabang/per periode di bawah tabel?
-5. Laporan Distribusi: rincian per produk di dalam tiap cabang tujuan (dapat dibuka/tutup) atau tabel terpisah? Selisih kirim = `qty_dikirim − qty_diterima` hanya untuk transfer berstatus `DITERIMA` (yang `DIKIRIM` belum ada selisih)?
-6. Rekap status pengajuan ikut difilter cabang (cabang tujuan) dan periode `requested_at` — setuju?
+1. Tes memakai database `softeng_inventaris_test` yang sudah ada (di-reset otomatis sebelum tes) — setuju? Tes tidak boleh menyentuh database development Anda.
+2. Skrip uji sementara (API dan browser) yang selama ini saya jalankan: dipindahkan ke repo hanya dalam bentuk Vitest backend (spec meminta tes backend saja), atau tes browser (Playwright) juga ikut ditambahkan? Tes browser di luar spec, jadi usulan saya tidak.
+3. `npm run db:reset` akan menghapus seluruh data development Anda (stok masuk, transfer, opname). Apakah Anda ingin saya mencobanya (Prisma meminta persetujuan eksplisit Anda), atau Anda jalankan sendiri, atau dilewati?
+4. Bagaimana menangani `npm audit` (kerentanan moderate) — dicatat saja di README, atau diperbarui bila ada perbaikan non-breaking?
