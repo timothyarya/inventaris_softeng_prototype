@@ -6,6 +6,7 @@ import { resolveBranchId } from "../../utils/scope";
 import type { AuthUser } from "../auth/service";
 import type { ListStocksQuery } from "./schema";
 import { stockStatus } from "./status";
+import { amanSql, habisSql, menipisSql } from "./statusSql";
 
 type StockRow = {
   branch_id: number;
@@ -60,10 +61,10 @@ export async function listStocks(query: ListStocksQuery, user: AuthUser) {
     const like = `%${query.q}%`;
     conditions.push(Prisma.sql`(p.sku ILIKE ${like} OR p.name ILIKE ${like})`);
   }
-  // Kondisi SQL ini harus sejalan dengan `stockStatus` di status.ts.
-  const habis = Prisma.sql`(p.is_active AND COALESCE(bs.qty, 0) = 0)`;
-  const menipis = Prisma.sql`(p.is_active AND COALESCE(bs.qty, 0) > 0 AND p.min_stock > 0 AND COALESCE(bs.qty, 0) < p.min_stock)`;
-  const aman = Prisma.sql`(p.is_active AND COALESCE(bs.qty, 0) > 0 AND (p.min_stock = 0 OR COALESCE(bs.qty, 0) >= p.min_stock))`;
+  // Kondisi SQL status ada di statusSql.ts (sejalan dengan `stockStatus` di status.ts).
+  const habis = habisSql;
+  const menipis = menipisSql;
+  const aman = amanSql;
   if (query.lowOnly) conditions.push(Prisma.sql`(${menipis} OR ${habis})`);
   if (query.status === "HABIS") conditions.push(habis);
   if (query.status === "MENIPIS") conditions.push(menipis);

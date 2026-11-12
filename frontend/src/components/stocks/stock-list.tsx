@@ -14,8 +14,9 @@ import { useStocks } from "@/hooks/use-stocks";
 import { formatBranch, formatNumber } from "@/lib/format";
 import type { StockRow } from "@/lib/types";
 
-export function StockStatusBadge({ row }: { row: StockRow }) {
-  if (row.status === "HABIS") {
+/** Lencana Habis (merah) / Menipis (kuning); null untuk status Aman. */
+export function StockLevelBadge({ status }: { status: StockRow["status"] }) {
+  if (status === "HABIS") {
     return (
       <Badge
         variant="secondary"
@@ -25,7 +26,7 @@ export function StockStatusBadge({ row }: { row: StockRow }) {
       </Badge>
     );
   }
-  if (row.status === "MENIPIS") {
+  if (status === "MENIPIS") {
     return (
       <Badge
         variant="secondary"
@@ -35,6 +36,11 @@ export function StockStatusBadge({ row }: { row: StockRow }) {
       </Badge>
     );
   }
+  return null;
+}
+
+export function StockStatusBadge({ row }: { row: StockRow }) {
+  if (row.status !== "AMAN") return <StockLevelBadge status={row.status} />;
   if (!row.product.isActive) {
     return (
       <Badge

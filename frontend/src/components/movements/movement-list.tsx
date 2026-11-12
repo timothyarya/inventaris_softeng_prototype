@@ -15,14 +15,14 @@ import { useAllProducts } from "@/hooks/use-products";
 import { formatBranch, formatDateTime, formatNumber } from "@/lib/format";
 import type { Movement, MovementType } from "@/lib/types";
 
-const TYPE_LABEL: Record<MovementType, string> = {
+export const TYPE_LABEL: Record<MovementType, string> = {
   MASUK: "Stok masuk",
   TRANSFER_OUT: "Transfer keluar",
   TRANSFER_IN: "Transfer masuk",
   OPNAME: "Opname",
 };
 
-const TYPE_CLASS: Record<MovementType, string> = {
+export const TYPE_CLASS: Record<MovementType, string> = {
   MASUK: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
   TRANSFER_OUT: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300",
   TRANSFER_IN: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300",
@@ -30,7 +30,7 @@ const TYPE_CLASS: Record<MovementType, string> = {
 };
 
 /** Qty bertanda: +5 hijau, −3 merah. */
-function signedQty(value: number): string {
+export function signedQty(value: number): string {
   return value > 0 ? `+${formatNumber(value)}` : `−${formatNumber(Math.abs(value))}`;
 }
 
@@ -38,7 +38,7 @@ function signedQty(value: number): string {
  * Tautan ke dokumen sumber. Stok masuk hanya dapat dibuka Owner/Admin Gudang (halamannya bukan
  * untuk Pegawai Cabang), jadi bagi Pegawai Cabang nomornya tampil sebagai teks.
  */
-function docHref(m: Movement, isAdmin: boolean): string | null {
+export function docHref(m: Movement, isAdmin: boolean): string | null {
   switch (m.refType) {
     case "STOCK_IN":
       return isAdmin ? `/stok-masuk/${m.refId}` : null;

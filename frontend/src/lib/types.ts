@@ -218,3 +218,56 @@ export type Movement = {
   refDocNo: string;
   user: { id: number; name: string };
 };
+
+export type DashboardProblemItem = {
+  branch: BranchRef;
+  product: { id: number; sku: string; name: string; unit: string; minStock: number };
+  qty: number;
+  status: StockStatus;
+};
+
+export type DashboardAdmin = {
+  scope: "ADMIN";
+  /** Cabang yang dipilih pada filter; null = semua cabang. */
+  branch: BranchRef | null;
+  cards: {
+    activeProducts: number;
+    activeBranches: number;
+    lowStock: number;
+    outOfStock: number;
+    pendingRequests: number;
+    readyToSend: number;
+    pendingOpnames: number;
+  };
+  lowStockItems: DashboardProblemItem[];
+  distribution: {
+    /** Batas jendela 30 hari, YYYY-MM-DD (hari Asia/Jakarta). */
+    from: string;
+    to: string;
+    items: { branch: BranchRef; qtySent: number }[];
+  };
+  recentMovements: Movement[];
+};
+
+export type DashboardPegawai = {
+  scope: "PEGAWAI";
+  branch: BranchRef;
+  cards: {
+    activeProducts: number;
+    lowStock: number;
+    outOfStock: number;
+    ongoingRequests: number;
+    incomingToConfirm: number;
+  };
+  lowStockItems: DashboardProblemItem[];
+  lastOpname: {
+    id: number;
+    docNo: string;
+    date: string;
+    status: OpnameStatus;
+    verifyNote: string | null;
+  } | null;
+  recentMovements: Movement[];
+};
+
+export type Dashboard = DashboardAdmin | DashboardPegawai;

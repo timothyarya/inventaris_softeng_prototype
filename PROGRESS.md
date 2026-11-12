@@ -14,8 +14,9 @@ _Terakhir diperbarui: 2026-11-13._
 | 3    | Stock service & stok masuk                   | **Selesai** | `6056011`          |
 | 4    | Transfer stok                                | **Selesai** | `9cd6ed1`          |
 | 5    | Stok opname                                  | **Selesai** | `80e6403`          |
-| 6    | Riwayat pergerakan stok                      | **Selesai** | commit "Fase 6: …" |
-| 7–9  | Dashboard → pengujian                        | Belum       | —                  |
+| 6    | Riwayat pergerakan stok                      | **Selesai** | `c624a27`          |
+| 7    | Dashboard                                    | **Selesai** | commit "Fase 7: …" |
+| 8–9  | Laporan → pengujian                          | Belum       | —                  |
 
 ### Yang sudah ada
 
@@ -97,6 +98,8 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 - Produk ganda dalam satu request/pengiriman ditolak; qty 1–1.000.000 per item, maksimal 200 baris. Request boleh memuat produk yang stok gudangnya 0 (stok baru dicek saat Kirim). Pegawai Cabang tidak melihat stok gudang; form pengiriman langsung Owner/Admin Gudang menampilkannya.
 - Setujui mengisi `qty_approved` (bawaan = diminta, boleh disesuaikan/0); form Kirim terisi dari `qty_approved` dan boleh diubah. Setujui dan Kirim butuh minimal satu item > 0. Terima: 0 … `qty_sent`, bawaan = dikirim; selisih tidak menjadi movement.
 - Yang menolak dicatat di `approved_by/approved_at` (tidak ada kolom terpisah); membatalkan tidak meminta alasan.
+- **Fase 7:** modul backend `dashboard`: `GET /dashboard` (semua role; bentuk respons menurut role, Owner/Admin Gudang dapat memfilter `branchId`); hitungan Menipis/Habis memakai kondisi SQL yang dipakai bersama `/stocks` (`stocks/statusSql.ts`); frontend `/dashboard` berisi kartu (Menipis dan Habis terpisah), tabel stok bermasalah, grafik batang distribusi 30 hari (Recharts), dan 10 pergerakan terbaru; Pegawai Cabang juga melihat kartu opname terakhir.
+
 - Kirim yang kekurangan stok ditolak utuh dengan 422 yang menyebut semua item yang kurang; nomor dokumen dan stok tidak berubah.
 - Detail transfer memuat `warehouseStock` hanya untuk Owner/Admin Gudang pada status DIAJUKAN/DISETUJUI; `shortfall` bernilai null sebelum diterima.
 
@@ -113,6 +116,13 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 - Dari jawaban Anda: tautan nomor dokumen ke halaman detail yang sudah ada (stok masuk hanya tautan untuk Owner/Admin Gudang), rentang tanggal bawaan kosong (semua), filter produk berupa dropdown (produk nonaktif tetap muncul untuk admin), label tipe berbahasa Indonesia dengan qty hijau/merah. Tanpa tanya (sesuai pola daftar lain): urutan terbaru dulu, 20 baris per halaman, tanpa ekspor.
 - **Bug zona waktu ditemukan dan diperbaiki:** sesi PostgreSQL di mesin ini memakai `Asia/Bangkok` sehingga filter tanggal pada kolom `timestamptz` bergeser ±7 jam. Sekarang koneksi memaksa `timezone=UTC`. Ini juga memperbaiki filter tanggal di daftar transfer (Fase 4) yang kemungkinan terdampak; tidak ada data yang berubah.
 - Pegawai Cabang tidak dapat memilih produk nonaktif pada dropdown produk (pembatasan `GET /products` yang ada); riwayat produk nonaktif di cabangnya tetap tampil di daftar tanpa filter.
+
+### Keputusan implementasi Fase 7 (lengkapnya di bagian 14 INSTRUCTION.md)
+
+- Dari jawaban Anda: dua kartu terpisah (Menipis kuning, Habis merah); filter cabang memengaruhi semuanya kecuali total produk aktif dan total cabang aktif (untuk transfer = cabang tujuan); grafik = batang per cabang tujuan untuk qty dikirim 30 hari terakhir (transfer `DIKIRIM`/`DITERIMA` menurut `sent_at`, pengiriman langsung ikut); kartu tanpa tautan.
+- Tanpa tanya (default saya): tabel stok bermasalah maksimal 10 baris (Habis dulu, lalu kekurangan terbesar) dengan tautan "Lihat semua stok"; opname terakhir Pegawai Cabang satu saja dengan tautan ke detailnya; tanpa polling (data segar saat dibuka dan saat tab kembali fokus); "jumlah produk" Pegawai Cabang = jumlah produk aktif.
+- Recharts dipasang (3.10.1, versi dikunci). Warna batang satu seri (biru) divalidasi dengan skrip palet; grafik punya tooltip, label aksesibilitas, dan tombol "Lihat tabel".
+- Refaktor kecil: kondisi SQL status stok dipindah ke `stocks/statusSql.ts` agar dipakai bersama `/stocks` dan dashboard; `movements/service.ts` mengekspor `toMovementDto`; `movement-list.tsx` mengekspor label/kelas tipe dan `docHref`; `stock-list.tsx` mengekspor `StockLevelBadge`.
 
 ### Penggantian nama role (setelah Fase 4)
 
@@ -139,39 +149,38 @@ npm run dev:fe         # terminal 2: Next.js di http://localhost:3000
 ## 4. Masalah yang belum selesai
 
 1. **`npm run db:reset` belum teruji.** Prisma memblokir `migrate reset` dari agen AI tanpa persetujuan eksplisit pemilik proyek. Script sudah diperbaiki (`prisma migrate reset --force && prisma generate && prisma db seed`), tetapi perlu dijalankan sendiri sekali. Perintah itu menghapus semua data database development.
-2. **Skrip uji tidak masuk repo.** Pengujian Fase 1 (46 cek HTTP, 14 cek `requireRole`/scoping, 62 cek browser) Fase 2 (153 cek API, 56 cek browser), Fase 3 (82 cek API, 21 cek langsung ke `stockService`/`generateDocNo`, 50 cek browser), dan Fase 4 (142 cek API termasuk konkurensi, 71 cek browser), Fase 5 (105 cek API termasuk konkurensi dan matriks persetujuan, 60 cek browser termasuk layar 390px), dan Fase 6 (56 cek API termasuk batas hari WIB dan integritas saldo, 29 cek browser) dijalankan lewat skrip sementara di folder scratchpad dan tidak di-commit. Tes otomatis di repo baru dibuat di Fase 9 (Vitest + Supertest).
+2. **Skrip uji tidak masuk repo.** Pengujian Fase 1 (46 cek HTTP, 14 cek `requireRole`/scoping, 62 cek browser) Fase 2 (153 cek API, 56 cek browser), Fase 3 (82 cek API, 21 cek langsung ke `stockService`/`generateDocNo`, 50 cek browser), dan Fase 4 (142 cek API termasuk konkurensi, 71 cek browser), Fase 5 (105 cek API termasuk konkurensi dan matriks persetujuan, 60 cek browser termasuk layar 390px), Fase 6 (56 cek API termasuk batas hari WIB dan integritas saldo, 29 cek browser), dan Fase 7 (55 cek API termasuk pencocokan angka dengan `/stocks` dan batas 30 hari WIB, 57 cek browser termasuk filter cabang, tiga role, layar 390px, dan mode gelap) dijalankan lewat skrip sementara di folder scratchpad dan tidak di-commit. Tes otomatis di repo baru dibuat di Fase 9 (Vitest + Supertest).
 3. **Database tes belum dipakai.** `softeng_inventaris_test` sudah dibuat tetapi belum dimigrasi. Ingat: URL migrasi Prisma 7 dibaca dari `prisma.config.ts`, jadi untuk tes perlu `DATABASE_URL` yang di-set lewat `cross-env` (lihat Fase 9).
 4. **`npm audit`** melaporkan beberapa kerentanan tingkat moderate (7 saat Fase 0) dan ESLint 9.39.5 memberi peringatan "no longer supported". Belum ditinjau.
 5. **Keterbatasan yang disengaja (spec tidak memintanya):**
    - Logout tidak mencabut token JWT; token tetap valid sampai kedaluwarsa. Akun nonaktif tetap ditolak lewat pemuatan ulang user.
    - Tidak ada pembatasan percobaan login.
-6. **Sebagian halaman di sidebar belum ada.** Produk, Kategori, Cabang, User (Fase 2), Stok Cabang, Inventaris, Stok Masuk (Fase 3), Transfer, Request Stok (Fase 4), dan Stok Opname (Fase 5), dan Riwayat Stok (Fase 6) sudah ada. Dashboard hanya berupa placeholder dan Laporan masih menampilkan "Halaman tidak ditemukan" di dalam layout sampai fasenya dikerjakan.
+6. **Sebagian halaman di sidebar belum ada.** Produk, Kategori, Cabang, User (Fase 2), Stok Cabang, Inventaris, Stok Masuk (Fase 3), Transfer, Request Stok (Fase 4), dan Stok Opname (Fase 5), Riwayat Stok (Fase 6), dan Dashboard (Fase 7) sudah ada. Laporan masih menampilkan "Halaman tidak ditemukan" di dalam layout sampai fasenya dikerjakan.
 7. **Folder kosong dari struktur spec** (`modules/*` selain `auth`, `services/`) belum ada di git. Dibuat saat dipakai.
 8. **Cabang baru tanpa stok:** semua produk aktifnya berstatus Habis (qty 0) sampai ada transfer yang diterima. Wajar.
 9. **Skenario uji 9 (nonaktif cabang dengan transfer DISETUJUI/DIKIRIM)** kini diuji di Fase 4 lewat transfer sungguhan di level API (ditolak 409; DIAJUKAN otomatis dibatalkan setelah transfer selesai). Belum ada pengujian lewat klik di UI untuk skenario ini.
 10. **Data uji dibersihkan manual.** Skrip uji membuat data (transfer, stok masuk, opname, cabang `ZT…`/`ZF…`, produk `UJI-…`) lalu dihapus lewat skrip pembersih; data yang Anda input sendiri (stok masuk dan transfer manual) tidak disentuh. Penghitung nomor dokumen (`doc_counters`) dibangun ulang dari dokumen yang ada setelah tes, agar nomor dokumen Anda tidak melompat atau bentrok. **Catatan insiden:** pada pengujian Fase 6, pembersih versi lama menghapus penghitung `OP` hari itu sehingga opname Anda sendiri (OP-20261112-0001/0002) berisiko bentrok nomor; sudah dipulihkan (`OP 20261112` = 2) dan pembersih diperbaiki. Opname dan stok Anda tidak terhapus. Di Fase 9 tes memakai database terpisah sehingga tidak perlu lagi.
 11. **Cabang yang dinonaktifkan tidak bisa menerima kiriman langsung maupun request**, tetapi transfer yang sudah DISETUJUI/DIKIRIM ke cabang itu memblokir penonaktifan (409) sehingga tidak ada transfer yang menggantung.
 
-## 5. Langkah berikutnya: Fase 7 — Dashboard
+## 5. Langkah berikutnya: Fase 8 — Laporan
 
-Cakupan (INSTRUCTION.md bagian 12, aturan 4.9, API bagian 7, sitemap bagian 9, dan catatan bagian 14):
+Cakupan (INSTRUCTION.md bagian 12, aturan 4.8, API bagian 7, sitemap bagian 9, dan catatan bagian 14):
 
-**Backend** (modul `dashboard`): `GET /dashboard` (semua role, isi sesuai role).
+**Backend** (modul `reports`): `GET /reports/stock` dan `GET /reports/distribution` (Owner dan Admin Gudang; parameter `branchId?`, `from`, `to`).
 
-- **Owner/Admin Gudang** (seluruh cabang, filter cabang opsional): kartu total produk aktif, total cabang aktif, jumlah item stok menipis, request transfer menunggu (`DIAJUKAN`), transfer siap kirim (`DISETUJUI`), opname menunggu verifikasi; tabel stok menipis (cabang, produk, qty, minimum); grafik distribusi 30 hari terakhir (qty dikirim per cabang); 10 pergerakan stok terbaru.
-- **Pegawai Cabang** (cabangnya sendiri): kartu jumlah produk, item stok menipis, request saya yang masih berjalan (`DIAJUKAN`/`DISETUJUI`/`DIKIRIM`), kiriman yang perlu dikonfirmasi (`DIKIRIM`); daftar stok menipis; status opname terakhir; 10 pergerakan stok terbaru di cabangnya.
-- Stok bermasalah dibagi **Menipis** dan **Habis** (bagian 14), ditampilkan terpisah. Gudang utama ikut dihitung untuk Owner/Admin Gudang. Grafik memakai Recharts (belum terpasang; dipasang saat pertama dipakai).
+- **Laporan Stok** per cabang × produk dalam periode: stok awal (jumlah movement sebelum tanggal mulai), Masuk, Transfer masuk, Transfer keluar, Penyesuaian opname (+/−), stok akhir = stok awal + semua pergerakan periode; tandai yang stok akhirnya di bawah minimum.
+- **Laporan Distribusi** (transfer `DIKIRIM`/`DITERIMA` dengan `sent_at` dalam periode): rekap per cabang tujuan (jumlah transfer, total qty dikirim, total qty diterima, total selisih kirim), rincian per produk, rekap status pengajuan (DIAJUKAN/DISETUJUI/DITOLAK/DIBATALKAN; hanya transfer dari request, menurut `requested_at`, status saat ini); pengiriman langsung sebagai baris terpisah "Pengiriman langsung".
+- Ekspor CSV/PDF **belum** (bagian 13).
 
-**Frontend:** `/dashboard` (saat ini placeholder) berisi kartu, tabel, grafik, dan daftar pergerakan terbaru per role.
+**Frontend:** `/laporan/stok` dan `/laporan/distribusi` (menu Laporan sudah ada di sidebar) dengan filter cabang dan periode.
 
-**Kriteria selesai:** angka di dashboard cocok dengan data di halaman terkait (stok, transfer, opname, riwayat).
+**Kriteria selesai:** untuk setiap cabang × produk, stok awal + pergerakan = stok akhir, dan stok akhir periode yang berjalan sampai hari ini = `branch_stocks.qty`.
 
 **Yang perlu ditanyakan sebelum mulai** (spec belum tegas):
 
-1. "Item stok menipis": dihitung per pasangan cabang × produk (tiap baris Menipis atau Habis dihitung satu), bukan per produk. Setuju? Apakah kartu dibagi dua ("Menipis" dan "Habis") sesuai catatan bagian 14, atau satu kartu dengan rincian?
-2. Filter cabang Owner/Admin Gudang: apakah ikut memengaruhi semua kartu, tabel, grafik, dan pergerakan terbaru (kecuali "total cabang aktif")? Bagaimana dengan "total produk aktif" yang tidak bergantung cabang?
-3. Grafik distribusi 30 hari: transfer berstatus `DIKIRIM` dan `DITERIMA` menurut `sent_at` (konsisten dengan Laporan Distribusi), qty dikirim, per cabang tujuan, batang per cabang (bukan per hari)? Apakah pengiriman langsung ikut dihitung?
-4. Tabel stok menipis: berapa baris maksimum di dashboard (usulan 10, urut paling kritis dulu: Habis lebih dulu, lalu selisih terhadap minimum) dan apakah perlu tautan "lihat semua" ke `/stok` yang terfilter?
-5. "Status opname terakhir" Pegawai Cabang: cukup satu opname terbaru (nomor, tanggal, status) dengan tautan ke detailnya?
-6. Tampilan kartu menjadi tautan ke halaman terkait (mis. kartu "Request menunggu" → `/transfer?status=DIAJUKAN`)? Halaman daftar saat ini belum membaca filter dari URL; menambahkannya sedikit di luar lingkup, jadi usulan saya kartu tanpa tautan kecuali Anda ingin sebaliknya.
-7. Pembaruan data: cukup dimuat saat halaman dibuka dan saat tab kembali fokus (bawaan TanStack Query), tanpa polling otomatis?
+1. Cakupan baris Laporan Stok: semua pasangan cabang × produk aktif (termasuk yang tanpa pergerakan, qty 0) atau hanya yang punya stok awal/pergerakan? Produk nonaktif yang masih punya stok/pergerakan ikut tampil? Gudang utama ikut dalam "seluruh cabang"?
+2. Bila periode berakhir sebelum hari ini, "tandai di bawah minimum" menurut stok akhir periode itu (bukan stok sekarang) — setuju? Apakah Habis dan Menipis ditandai terpisah (sesuai catatan bagian 14)?
+3. Periode bawaan dan batasnya: wajib diisi atau bawaan (mis. bulan berjalan)? Batas hari WIB inklusif seperti `/riwayat`?
+4. Bentuk tampilan: tabel paginasi per halaman atau semua baris sekaligus? Total per cabang/per periode di bawah tabel?
+5. Laporan Distribusi: rincian per produk di dalam tiap cabang tujuan (dapat dibuka/tutup) atau tabel terpisah? Selisih kirim = `qty_dikirim − qty_diterima` hanya untuk transfer berstatus `DITERIMA` (yang `DIKIRIM` belum ada selisih)?
+6. Rekap status pengajuan ikut difilter cabang (cabang tujuan) dan periode `requested_at` — setuju?

@@ -7,15 +7,15 @@ import { resolveBranchId } from "../../utils/scope";
 import type { AuthUser } from "../auth/service";
 import type { ListMovementsQuery } from "./schema";
 
-const include = {
+export const movementInclude = {
   branch: { select: { id: true, code: true, name: true, isMain: true } },
   product: { select: { id: true, sku: true, name: true, unit: true, isActive: true } },
   user: { select: { id: true, name: true } },
 } as const;
 
-type Row = Prisma.StockMovementGetPayload<{ include: typeof include }>;
+type Row = Prisma.StockMovementGetPayload<{ include: typeof movementInclude }>;
 
-function toDto(row: Row) {
+export function toMovementDto(row: Row) {
   return {
     id: row.id,
     createdAt: row.createdAt,
@@ -73,10 +73,10 @@ export async function listMovements(query: ListMovementsQuery, user: AuthUser) {
     prisma.stockMovement.findMany({
       where,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      include,
+      include: movementInclude,
       ...skipTake(query),
     }),
     prisma.stockMovement.count({ where }),
   ]);
-  return { data: rows.map(toDto), meta: pageMeta(query, total) };
+  return { data: rows.map(toMovementDto), meta: pageMeta(query, total) };
 }
